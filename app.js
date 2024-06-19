@@ -5,6 +5,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let camera, scene, renderer, stats;
 let material;
@@ -39,6 +40,18 @@ function init() {
 	scene = new THREE.Scene();
 	scene.rotation.y = 0.5; // avoid flying objects occluding the sun
 
+	new GLTFLoader()
+		.setPath('models/gltf/')
+		.load('collision-world.glb', function (gltf) {
+			const c = gltf.scene;
+			gltf.scene.position.y = -10;
+			gltf.scene.scale.setScalar(10);
+			gltf.scene.traverse((node) => {
+				if (node.material?.map) node.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+			});
+			scene.add(gltf.scene);
+		});
+
 	new RGBELoader()
 		.setPath('textures/equirectangular/')
 		.load('quarry_01_1k.hdr', function (texture) {
@@ -68,46 +81,8 @@ function init() {
 	gui.add(material, 'thickness', 0, 5);
 	gui.add(renderer, 'toneMappingExposure', 0, 2).name('exposure');
 
-	const floor = new THREE.Mesh(new THREE.PlaneGeometry(), material);
-	floor.scale.setScalar(100);
-	floor.position.y = -30;
-	floor.rotation.x = -Math.PI * 0.5;
-	scene.add(floor);
-
 	controls = new OrbitControls(camera, renderer.domElement);
 	// controls.autoRotate = true;
-
-	{
-		class CustomSinCurve extends THREE.Curve {
-
-			constructor(scale = 1) {
-				super();
-				this.scale = scale;
-			}
-
-			getPoint(t, optionalTarget = new THREE.Vector3()) {
-
-				const tx = t * 3 - 1.5;
-				const ty = Math.sin(2 * Math.PI * t);
-				const tz = 0;
-
-				return optionalTarget.set(tx, ty, tz).multiplyScalar(this.scale);
-			}
-		}
-
-		const path = new CustomSinCurve(10);
-		const geometry = new THREE.TubeGeometry(path, 20, 2, 8, false);
-		const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-		const mesh = new THREE.Mesh(geometry, material);
-		scene.add(mesh);
-	}
-	{
-		const geometry = new THREE.TorusKnotGeometry(10, 3, 100, 16);
-		const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-		const torusKnot = new THREE.Mesh(geometry, material);
-		scene.add(torusKnot);
-		torusKnot.position.y = 30;
-	}
 }
 
 function onWindowResized() {
