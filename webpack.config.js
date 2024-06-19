@@ -15,6 +15,7 @@ module.exports = {
 	plugins: [
 		new CopyPlugin({
 			patterns: [
+				{ from: '../three.js/examples/models/gltf/collision-world.glb', to: 'models/gltf/collision-world.glb' },
 				{ from: '../three.js/examples/textures/equirectangular/quarry_01_1k.hdr', to: 'textures/equirectangular/quarry_01_1k.hdr' }
 			]
 		}),
