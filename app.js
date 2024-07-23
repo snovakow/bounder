@@ -1,11 +1,9 @@
 import * as THREE from 'three';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let camera, scene, renderer, stats;
 let material;
@@ -39,30 +37,6 @@ function init() {
 
 	scene = new THREE.Scene();
 	scene.rotation.y = 0.5; // avoid flying objects occluding the sun
-
-	new GLTFLoader()
-		.setPath('models/gltf/')
-		.load('collision-world.glb', function (gltf) {
-			const c = gltf.scene;
-			gltf.scene.position.y = -10;
-			gltf.scene.scale.setScalar(10);
-			gltf.scene.traverse((node) => {
-				if (node.material?.map) node.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-			});
-			scene.add(gltf.scene);
-		});
-
-	new RGBELoader()
-		.setPath('textures/equirectangular/')
-		.load('quarry_01_1k.hdr', function (texture) {
-
-			texture.mapping = THREE.EquirectangularReflectionMapping;
-
-			scene.background = texture;
-			scene.environment = texture;
-
-			material.envMap = texture;
-		});
 
 	material = new THREE.MeshPhysicalMaterial({
 		transmission: 1.0,
