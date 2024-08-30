@@ -1,26 +1,22 @@
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-// const CopyPlugin = require('copy-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 const path = require('path');
 
 module.exports = {
 	mode: "production",
 	entry: './main.js',
 	output: {
-		filename: '[chunkhash].js',
+		filename: 'main.js',
 		path: path.resolve(__dirname, '../../live/bounder'),
 		chunkFilename: '[chunkhash].js',
 		clean: true,
 		publicPath: ''
 	},
 	plugins: [
-		// new CopyPlugin({
-		// 	patterns: [
-		// 		{ from: '../three.js/examples/models/gltf/collision-world.glb', to: 'models/gltf/collision-world.glb' },
-		// 		{ from: '../three.js/examples/textures/equirectangular/quarry_01_1k.hdr', to: 'textures/equirectangular/quarry_01_1k.hdr' }
-		// 	]
-		// }),
-		new HtmlWebpackPlugin({
-			title: "Bounder"
+		new CopyPlugin({
+			patterns: [
+				// { from: '../three.js/examples/models/gltf/collision-world.glb', to: 'models/gltf/collision-world.glb' },
+				{ from: 'index.html', to: 'index.html' }
+			]
 		})
 	],
 	resolve: {
