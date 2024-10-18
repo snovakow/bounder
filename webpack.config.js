@@ -21,8 +21,8 @@ module.exports = {
 	],
 	resolve: {
 		alias: {
-			three$: path.resolve(__dirname, '../three.js/src/Three.js'),
-			'three/addons': path.resolve(__dirname, '../three.js/examples/jsm')
+			three$: path.resolve(__dirname, '../../three.js/src/Three.js'),
+			'three/addons': path.resolve(__dirname, '../../three.js/examples/jsm')
 		}
 	}
 };
