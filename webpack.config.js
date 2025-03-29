@@ -6,7 +6,7 @@ module.exports = {
 	entry: './main.js',
 	output: {
 		filename: 'main.js',
-		path: path.resolve(__dirname, '../../live/bounder'),
+		path: path.resolve(__dirname, '../../live_offline/bounder'),
 		chunkFilename: '[chunkhash].js',
 		clean: true,
 		publicPath: ''
@@ -14,7 +14,7 @@ module.exports = {
 	plugins: [
 		new CopyPlugin({
 			patterns: [
-				// { from: '../three.js/examples/models/gltf/collision-world.glb', to: 'models/gltf/collision-world.glb' },
+				{ from: 'include', to: 'include' },
 				{ from: 'index.html', to: 'index.html' }
 			]
 		})
