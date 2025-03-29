@@ -8,8 +8,6 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// import { AmmoPhysics } from 'three/addons/physics/AmmoPhysics.js';
-
 let camera, scene, stats;
 
 let controls;
@@ -27,9 +25,8 @@ function init() {
 	const renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setPixelRatio(window.devicePixelRatio);
 	renderer.setSize(window.innerWidth, window.innerHeight);
-	// renderer.toneMapping = THREE.ACESFilmicToneMapping;
-	// renderer.toneMapping = THREE.ReinhardToneMapping; //ReinhardToneMapping  LinearToneMapping ACESFilmicToneMapping
-	// renderer.toneMappingExposure = 1;
+	renderer.toneMapping = THREE.ReinhardToneMapping;
+	renderer.toneMappingExposure = 1;
 
 	document.body.appendChild(renderer.domElement);
 
@@ -53,7 +50,6 @@ function init() {
 	camera.lookAt(new Vector3(0, 0, 0));
 
 	scene = new THREE.Scene();
-
 
 	const light = new THREE.DirectionalLight(0xffffff, 1);
 	light.castShadow = true;
@@ -191,11 +187,6 @@ function init() {
 			// material.envMap = texture;
 		});
 
-	const gui = new GUI();
-	gui.add(light.shadow, 'bias', -0.001, 0).name('bias');
-	gui.add(light.shadow.camera, 'near', 0, 2).name('near');
-	gui.add(renderer, 'toneMappingExposure', 0, 2).name('exposure');
-
 	controls = new OrbitControls(camera, renderer.domElement);
 	// controls.autoRotate = true;
 
@@ -210,14 +201,12 @@ function init() {
 
 	const dummy = new THREE.Object3D();
 
-
-
 	for (let i = 0; i < 1000; i++) {
 		const x = i % 25;
-		const y = 10;
+		const y = 5 + Math.random() * 10;
 		const z = Math.floor(i / 25);
 
-		const position = new Vector3(x * 0.2, y, z * 0.2);
+		const position = new Vector3(x * 1, y, z * 1);
 
 		positions[i] = position;
 
@@ -275,6 +264,52 @@ function init() {
 
 	}
 
+	const gui = new GUI();
+
+	gui.add(light.shadow.camera, 'left', -1000, 0).name('left');
+	// gui.add(light.shadow.camera, 'right', 0, 1000).name('right');
+	// gui.add(light.shadow.camera, 'top',  0, 1000).name('top');
+	// gui.add(light.shadow.camera, 'bottom', -1000, 0).name('bottom');
+	// light.shadow.camera.near = 1;
+	// light.shadow.camera.far = 1000;
+	// light.shadow.mapSize.x = 4096;
+	// light.shadow.mapSize.y = 4096;
+
+	gui.add(light.position, 'x', -1000, 1000).name('Light X');
+	gui.add(light.position, 'y', -1000, 1000).name('Light Y');
+	gui.add(light.position, 'z', -1000, 1000).name('Light Z');
+
+	gui.add(light, 'intensity', 0, 1).name('intensity');
+
+	gui.add(light.shadow, 'bias', -0.001, 0).name('bias');
+	gui.add(light.shadow.camera, 'near', 0, 2).name('near');
+	gui.add(renderer, 'toneMappingExposure', 0, 1).name('exposure');
+
+	// const shadowMapTypes = {
+	// 	BasicShadowMap: THREE.BasicShadowMap,
+	// 	PCFShadowMap: THREE.PCFShadowMap,
+	// 	PCFSoftShadowMap: THREE.PCFSoftShadowMap,
+	// 	VSMShadowMap: THREE.VSMShadowMap,
+	// };
+	// gui.add(renderer.shadowMap, 'type', shadowMapTypes).name('shadowMap').onChange = ()=>{
+	// 	renderer.shadowMap.needsUpdate = true;
+	// };
+
+	const toneMappingFormats = {
+		NoToneMapping: THREE.NoToneMapping,
+		LinearToneMapping: THREE.LinearToneMapping,
+		ReinhardToneMapping: THREE.ReinhardToneMapping,
+		CineonToneMapping: THREE.CineonToneMapping,
+		ACESFilmicToneMapping: THREE.ACESFilmicToneMapping,
+		AgXToneMapping: THREE.AgXToneMapping,
+		NeutralToneMapping: THREE.NeutralToneMapping,
+	};
+	gui.add(renderer, 'toneMapping', toneMappingFormats).name('toneMapping');
+
+	renderer.toneMapping = THREE.ReinhardToneMapping; //ReinhardToneMapping  LinearToneMapping ACESFilmicToneMapping
+	renderer.toneMappingExposure = 1;
+
+
 	let previousTime = 0;
 	const animate = (msTime) => {
 		if (previousTime === 0) {
@@ -286,8 +321,8 @@ function init() {
 
 		controls.update();
 
-		updatePhysics(deltaTime);
-		updateCollision();
+		// updatePhysics(deltaTime);
+		// updateCollision();
 
 		renderer.render(scene, camera);
 
