@@ -4,6 +4,8 @@ import { Vector3 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
+import { Sky } from 'three/addons/objects/Sky.js';
+
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -13,6 +15,8 @@ let camera, scene, stats;
 let controls;
 
 function init() {
+	const BALL_COUNT = 100;
+
 	const onWindowResized = () => {
 
 		renderer.setSize(window.innerWidth, window.innerHeight);
@@ -51,6 +55,21 @@ function init() {
 
 	scene = new THREE.Scene();
 
+	const sunAngle = {
+		phi: 45,
+		theta: 180,
+	};
+	const sunAnglePrev = { ...sunAngle };
+	const sky = new Sky();
+	sky.scale.setScalar(450000);
+
+	const degToRad = Math.PI / 180;
+	const radToDeg = 180 / Math.PI;
+	const sunPosition = new Vector3().setFromSphericalCoords(1, sunAngle.phi * degToRad, sunAngle.theta * degToRad);
+	sky.material.uniforms.sunPosition.value = sunPosition;
+
+	scene.add(sky);
+
 	const light = new THREE.DirectionalLight(0xffffff, 1);
 	light.castShadow = true;
 	const dLight = 1000;
@@ -69,10 +88,10 @@ function init() {
 	light.shadow.mapSize.x = 4096;
 	light.shadow.mapSize.y = 4096;
 
-	light.position.set(50, 100, 50);
+	light.position.copy(sunPosition);
 	scene.add(light);
 
-	const material = new THREE.MeshNormalMaterial();
+	const material = new THREE.MeshStandardMaterial();
 	let room = null;
 
 	let transformAux1;
@@ -162,14 +181,11 @@ function init() {
 				}
 			});
 
-			// room.receiveShadow = true;
-			// room.castShadow = true;
-
 			scene.add(room);
 
 			initPhysics(room);
 
-			for (let i = 0; i < 1000; i++) {
+			for (let i = 0; i < BALL_COUNT; i++) {
 				const position = positions[i];
 				physicsBodies[i] = generateObject(position);
 			}
@@ -181,10 +197,10 @@ function init() {
 
 			texture.mapping = THREE.EquirectangularReflectionMapping;
 
-			scene.background = texture;
+			// scene.background = texture;
 			scene.environment = texture;
 
-			// material.envMap = texture;
+			material.envMap = texture;
 		});
 
 	controls = new OrbitControls(camera, renderer.domElement);
@@ -192,7 +208,7 @@ function init() {
 
 	const geometry = new THREE.SphereGeometry(0.4, 24, 12);
 
-	const mesh = new THREE.InstancedMesh(geometry, material, 1000);
+	const mesh = new THREE.InstancedMesh(geometry, material, BALL_COUNT);
 	mesh.castShadow = true;
 	mesh.receiveShadow = true;
 
@@ -201,10 +217,11 @@ function init() {
 
 	const dummy = new THREE.Object3D();
 
-	for (let i = 0; i < 1000; i++) {
-		const x = i % 25;
+	const sqRoot = Math.pow(BALL_COUNT, 0.5);
+	for (let i = 0; i < BALL_COUNT; i++) {
+		const x = i % sqRoot;
 		const y = 5 + Math.random() * 10;
-		const z = Math.floor(i / 25);
+		const z = Math.floor(i / sqRoot);
 
 		const position = new Vector3(x * 1, y, z * 1);
 
@@ -222,7 +239,7 @@ function init() {
 	const raycaster = new THREE.Raycaster();
 	const updateCollision = () => {
 		if (!room) return;
-		for (let i = 0; i < 1000; i++) {
+		for (let i = 0; i < BALL_COUNT; i++) {
 			const position = positions[i];
 
 			dummy.position.copy(position);
@@ -266,7 +283,7 @@ function init() {
 
 	const gui = new GUI();
 
-	gui.add(light.shadow.camera, 'left', -1000, 0).name('left');
+	// gui.add(light.shadow.camera, 'left', -1000, 0).name('left');
 	// gui.add(light.shadow.camera, 'right', 0, 1000).name('right');
 	// gui.add(light.shadow.camera, 'top',  0, 1000).name('top');
 	// gui.add(light.shadow.camera, 'bottom', -1000, 0).name('bottom');
@@ -275,14 +292,15 @@ function init() {
 	// light.shadow.mapSize.x = 4096;
 	// light.shadow.mapSize.y = 4096;
 
-	gui.add(light.position, 'x', -1000, 1000).name('Light X');
-	gui.add(light.position, 'y', -1000, 1000).name('Light Y');
-	gui.add(light.position, 'z', -1000, 1000).name('Light Z');
+	// gui.add(light.position, 'x', -1000, 1000).name('Light X');
+	// gui.add(light.position, 'y', -1000, 1000).name('Light Y');
+	// gui.add(light.position, 'z', -1000, 1000).name('Light Z');
+	gui.add(sunAngle, 'phi', -90, 90).name('Sun phi');
+	gui.add(sunAngle, 'theta', -180, 180).name('Sun theta');
 
 	gui.add(light, 'intensity', 0, 1).name('intensity');
 
 	gui.add(light.shadow, 'bias', -0.001, 0).name('bias');
-	gui.add(light.shadow.camera, 'near', 0, 2).name('near');
 	gui.add(renderer, 'toneMappingExposure', 0, 1).name('exposure');
 
 	// const shadowMapTypes = {
@@ -306,10 +324,6 @@ function init() {
 	};
 	gui.add(renderer, 'toneMapping', toneMappingFormats).name('toneMapping');
 
-	renderer.toneMapping = THREE.ReinhardToneMapping; //ReinhardToneMapping  LinearToneMapping ACESFilmicToneMapping
-	renderer.toneMappingExposure = 1;
-
-
 	let previousTime = 0;
 	const animate = (msTime) => {
 		if (previousTime === 0) {
@@ -320,6 +334,15 @@ function init() {
 		previousTime = msTime;
 
 		controls.update();
+
+		if (sunAngle.phi !== sunAnglePrev.phi || sunAngle.theta !== sunAnglePrev.theta) {
+			sunPosition.setFromSphericalCoords(1, sunAngle.phi * degToRad, sunAngle.theta * degToRad);
+			light.position.copy(sunPosition);
+			// sky.material.uniforms.sunPosition.value.copy(sunPosition);
+
+			sunAnglePrev.phi = sunAngle.phi;
+			sunAnglePrev.theta = sunAngle.theta;
+		}
 
 		// updatePhysics(deltaTime);
 		// updateCollision();
