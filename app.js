@@ -10,20 +10,18 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-let camera, scene, stats;
+const BALL_COUNT = 100;
+const degToRad = Math.PI / 180;
+const radToDeg = 180 / Math.PI;
 
-let controls;
+let camera, scene, stats, controls;
 
 function init() {
-	const BALL_COUNT = 100;
-
 	const onWindowResized = () => {
-
 		renderer.setSize(window.innerWidth, window.innerHeight);
 
 		camera.aspect = window.innerWidth / window.innerHeight;
 		camera.updateProjectionMatrix();
-
 	}
 
 	const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -49,9 +47,6 @@ function init() {
 	document.body.appendChild(stats.dom);
 
 	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-	camera.position.z = 5;
-	camera.position.y = 20;
-	camera.lookAt(new Vector3(0, 0, 0));
 
 	scene = new THREE.Scene();
 
@@ -61,14 +56,15 @@ function init() {
 	};
 	const sunAnglePrev = { ...sunAngle };
 	const sky = new Sky();
-	sky.scale.setScalar(450000);
+	sky.scale.setScalar(100);
 
-	const degToRad = Math.PI / 180;
-	const radToDeg = 180 / Math.PI;
 	const sunPosition = new Vector3().setFromSphericalCoords(1, sunAngle.phi * degToRad, sunAngle.theta * degToRad);
 	sky.material.uniforms.sunPosition.value = sunPosition;
 
 	scene.add(sky);
+
+	// const hemisphereLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
+	// scene.add( hemisphereLight );
 
 	const light = new THREE.DirectionalLight(0xffffff, 1);
 	light.castShadow = true;
@@ -89,6 +85,8 @@ function init() {
 	light.shadow.mapSize.y = 4096;
 
 	light.position.copy(sunPosition);
+	light.position.setLength(10);
+
 	scene.add(light);
 
 	const material = new THREE.MeshStandardMaterial();
@@ -166,6 +164,20 @@ function init() {
 
 
 	}
+
+	const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(2048);
+	cubeRenderTarget.texture.type = THREE.HalfFloatType;
+
+	const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
+	cubeCamera.update(renderer, scene);
+	scene.background = cubeRenderTarget.texture;
+	// scene.environment = cubeRenderTarget.texture;
+
+	material.envMap = cubeRenderTarget.texture;
+
+	scene.remove(sky);
+
+	const down = new Vector3(0, -1, 0);
 	new GLTFLoader()
 		.setPath('include/models/gltf/')
 		.load('collision-world.glb', function (gltf) {
@@ -173,7 +185,11 @@ function init() {
 			// room.position.y = -10;
 			// room.scale.setScalar(10);
 			room.traverse((node) => {
-				if (node.material?.map) node.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+				if (node.material) {
+					if (node.material.map) node.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+					node.material.envMapIntensity = 0.3;
+					node.material.envMap = cubeRenderTarget.texture;
+				}
 
 				if (node.isMesh) {
 					node.castShadow = true;
@@ -189,22 +205,28 @@ function init() {
 				const position = positions[i];
 				physicsBodies[i] = generateObject(position);
 			}
+
+			camera.position.x = 0;
+			camera.position.y = 20;
+			camera.position.z = 0;
+
+			controls = new OrbitControls(camera, renderer.domElement);
+
+			const raycaster = new THREE.Raycaster(camera.position, down);
+			const intersects = raycaster.intersectObject(room);
+			const hit = intersects[0];
+			if (hit) {
+				console.log(hit.point);
+				camera.position.copy(hit.point);
+				camera.position.y += 1.6;
+				// camera.rotation.x=1;
+				// camera.rotation.y=1;
+				// camera.rotation.z=1;
+				// controls.update();
+			}
+			controls.target.set(0, 0, -1);
+
 		});
-
-	new RGBELoader()
-		.setPath('include/textures/equirectangular/')
-		.load('quarry_01_1k.hdr', function (texture) {
-
-			texture.mapping = THREE.EquirectangularReflectionMapping;
-
-			// scene.background = texture;
-			scene.environment = texture;
-
-			material.envMap = texture;
-		});
-
-	controls = new OrbitControls(camera, renderer.domElement);
-	// controls.autoRotate = true;
 
 	const geometry = new THREE.SphereGeometry(0.4, 24, 12);
 
@@ -234,9 +256,6 @@ function init() {
 
 	}
 
-	const down = new Vector3(0, -1, 0);
-
-	const raycaster = new THREE.Raycaster();
 	const updateCollision = () => {
 		if (!room) return;
 		for (let i = 0; i < BALL_COUNT; i++) {
@@ -245,11 +264,6 @@ function init() {
 			dummy.position.copy(position);
 			dummy.updateMatrix();
 			mesh.setMatrixAt(i, dummy.matrix);
-
-
-			// raycaster.set(position, down);
-			// const intersects = raycaster.intersectObject(room);
-
 		}
 		mesh.instanceMatrix.needsUpdate = true;
 	}
@@ -283,6 +297,9 @@ function init() {
 
 	const gui = new GUI();
 
+	gui.add(light.shadow, 'radius', 0, 2).name('shadow radius');
+	gui.add(light.shadow, 'normalBias', 0, 0.1).name('shadow normalBias');
+
 	// gui.add(light.shadow.camera, 'left', -1000, 0).name('left');
 	// gui.add(light.shadow.camera, 'right', 0, 1000).name('right');
 	// gui.add(light.shadow.camera, 'top',  0, 1000).name('top');
@@ -298,10 +315,15 @@ function init() {
 	gui.add(sunAngle, 'phi', -90, 90).name('Sun phi');
 	gui.add(sunAngle, 'theta', -180, 180).name('Sun theta');
 
+	gui.add(sky.material.uniforms.turbidity, 'value', 0, 20).name('turbidity');
+	gui.add(sky.material.uniforms.rayleigh, 'value', 0, 4).name('rayleigh');
+	gui.add(sky.material.uniforms.mieCoefficient, 'value', 0, 0.1).name('mieCoefficient');
+	gui.add(sky.material.uniforms.mieDirectionalG, 'value', 0, 1).name('mieDirectionalG');
+
 	gui.add(light, 'intensity', 0, 1).name('intensity');
 
 	gui.add(light.shadow, 'bias', -0.001, 0).name('bias');
-	gui.add(renderer, 'toneMappingExposure', 0, 1).name('exposure');
+	gui.add(renderer, 'toneMappingExposure', 0, 1).name('toneMappingExposure');
 
 	// const shadowMapTypes = {
 	// 	BasicShadowMap: THREE.BasicShadowMap,
@@ -333,11 +355,12 @@ function init() {
 		const deltaTime = msTime - previousTime;
 		previousTime = msTime;
 
-		controls.update();
+		if (controls) controls.update(deltaTime);
 
 		if (sunAngle.phi !== sunAnglePrev.phi || sunAngle.theta !== sunAnglePrev.theta) {
 			sunPosition.setFromSphericalCoords(1, sunAngle.phi * degToRad, sunAngle.theta * degToRad);
 			light.position.copy(sunPosition);
+			light.position.setLength(10);
 			// sky.material.uniforms.sunPosition.value.copy(sunPosition);
 
 			sunAnglePrev.phi = sunAngle.phi;
@@ -353,6 +376,30 @@ function init() {
 
 	}
 	renderer.setAnimationLoop(animate);
+
+	const addPoint = (position) => {
+		const geometry = new THREE.SphereGeometry(0.1, 12, 6);
+
+		const sphere = new THREE.Mesh(geometry, material);
+		sphere.position.copy(position);
+		sphere.castShadow = true;
+		sphere.receiveShadow = true;
+		scene.add(sphere);
+	}
+	const hitTester = (event) => {
+		const pointer = new THREE.Vector2();
+		const raycaster = new THREE.Raycaster(camera.position, down);
+
+		pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+		pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+		raycaster.setFromCamera(pointer, camera);
+		const intersects = raycaster.intersectObjects(scene.children);
+		const hit = intersects[0];
+		if (hit) {
+			addPoint(hit.point);
+		}
+	}
+	renderer.domElement.addEventListener('click', hitTester);
 }
 
 const script = document.createElement('script');
