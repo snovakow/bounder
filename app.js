@@ -183,7 +183,7 @@ function init() {
 		.load('collision-world.glb', function (gltf) {
 			room = gltf.scene;
 			// room.position.y = -10;
-			// room.scale.setScalar(10);
+			room.scale.setScalar(1);
 			room.traverse((node) => {
 				if (node.material) {
 					if (node.material.map) node.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -377,14 +377,33 @@ function init() {
 	}
 	renderer.setAnimationLoop(animate);
 
+	const floorArea = [];
 	const addPoint = (position) => {
-		const geometry = new THREE.SphereGeometry(0.1, 12, 6);
+		const radius = 0.5;
+		const lineRadius = radius * 0.5;
+		const geometry = new THREE.SphereGeometry(radius, 18, 9);
 
 		const sphere = new THREE.Mesh(geometry, material);
 		sphere.position.copy(position);
-		sphere.castShadow = true;
+		// sphere.castShadow = true;
 		sphere.receiveShadow = true;
 		scene.add(sphere);
+		if (floorArea.length > 0) {
+			const previousPoint = floorArea[floorArea.length - 1];
+
+			const cylinderGeometry = new THREE.CylinderGeometry(lineRadius, lineRadius, 1, 9, 1, true);
+
+			const cylinder = new THREE.Mesh(cylinderGeometry, material);
+			cylinder.position.copy(previousPoint);
+			cylinder.position.y = 1;
+			// cylinder.castShadow = true;
+			cylinder.receiveShadow = true;
+			cylinder.scale.x = 1;
+			cylinder.scale.y = 10;
+			cylinder.scale.z = 1;
+			scene.add(cylinder);
+		}
+		floorArea.push(position);
 	}
 	const hitTester = (event) => {
 		const pointer = new THREE.Vector2();
