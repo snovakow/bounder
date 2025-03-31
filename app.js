@@ -219,7 +219,6 @@ function init() {
 			const intersects = raycaster.intersectObject(room);
 			const hit = intersects[0];
 			if (hit) {
-				console.log(hit.point);
 				camera.position.copy(hit.point);
 				camera.position.y += 1.6;
 				// camera.rotation.x=1;
@@ -389,6 +388,11 @@ function init() {
 		const geometry = new THREE.SphereGeometry(radius, 18, 9);
 
 		const sphere = new THREE.Mesh(geometry, material);
+		sphere.userData.framing = {
+			node: true
+		};
+
+		console.log(sphere.userData);
 		sphere.position.copy(position);
 		// sphere.castShadow = true;
 		sphere.receiveShadow = true;
@@ -404,6 +408,9 @@ function init() {
 			const cylinderGeometry = new THREE.CylinderGeometry(lineRadius, lineRadius, 1, 9, 1, true);
 
 			const cylinder = new THREE.Mesh(cylinderGeometry, material);
+			cylinder.userData.framing = {
+				node: false
+			};
 			cylinder.receiveShadow = true;
 
 			const unitRay = ray.clone().normalize();
@@ -421,19 +428,61 @@ function init() {
 		floorArea.push(sphere);
 	}
 
+	const moveFramingNode = (node, position) => {
+		console.log(node, position);
+		node.position.copy(position);
+	}
+
 	let dragging = false;
 	let mouseDown = false;
+	let selectedFrameNode = null;
 	const mousedownEvent = (event) => {
 		mouseDown = true;
 		dragging = false;
+
+		const pointer = new THREE.Vector2();
+		const raycaster = new THREE.Raycaster(camera.position, down);
+
+		pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+		pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+		raycaster.setFromCamera(pointer, camera);
+		const intersects = raycaster.intersectObjects(scene.children);
+		const hit = intersects[0];
+		if (hit) {
+			if (hit.object.userData.framing) {
+				if (hit.object.userData.framing.node) {
+					selectedFrameNode = hit.object;
+					controls.enabled = false;
+				}
+			}
+		}
 	}
 	const mousemoveEvent = (event) => {
 		if (mouseDown) dragging = true;
+		event.stopPropagation();
+
+		if (selectedFrameNode) {
+			const pointer = new THREE.Vector2();
+			const raycaster = new THREE.Raycaster();
+
+			pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+			pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+			raycaster.setFromCamera(pointer, camera);
+			const intersects = raycaster.intersectObjects(scene.children);
+			for (const hit of intersects) {
+				if (hit.object.userData.framing?.node) {
+					continue;
+				} else {
+					moveFramingNode(selectedFrameNode, hit.point);
+					break;
+				}
+			}
+		}
 	}
 	const mouseupEvent = (event) => {
 		if (!dragging) {
 			const pointer = new THREE.Vector2();
-			const raycaster = new THREE.Raycaster(camera.position, down);
+			const raycaster = new THREE.Raycaster();
 
 			pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
 			pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
@@ -441,9 +490,17 @@ function init() {
 			const intersects = raycaster.intersectObjects(scene.children);
 			const hit = intersects[0];
 			if (hit) {
+				let hitFraming = false;
+				if (hit.object.userData.framing) {
+					if (hit.object.userData.framing.node) {
+						hitFraming = true;
+					}
+				}
 				addPoint(hit.point);
 			}
 		}
+		controls.enabled = true;
+		selectedFrameNode = null;
 		mouseDown = false;
 		dragging = false;
 	}
