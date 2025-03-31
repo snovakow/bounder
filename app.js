@@ -16,6 +16,8 @@ const radToDeg = 180 / Math.PI;
 
 let camera, scene, stats, controls;
 
+const ENABLE_AMMO = false;
+
 function init() {
 	const onWindowResized = () => {
 		renderer.setSize(window.innerWidth, window.innerHeight);
@@ -89,7 +91,7 @@ function init() {
 
 	scene.add(light);
 
-	const material = new THREE.MeshStandardMaterial();
+	const material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
 	let room = null;
 
 	let transformAux1;
@@ -122,6 +124,7 @@ function init() {
 		transformAux1 = new Ammo.btTransform();
 
 	}
+
 	const positions = [];
 	const physicsBodies = [];
 	function generateObject(position) {
@@ -161,8 +164,6 @@ function init() {
 
 		physicsWorld.addRigidBody(body);
 		return body;
-
-
 	}
 
 	const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(2048);
@@ -178,6 +179,7 @@ function init() {
 	scene.remove(sky);
 
 	const down = new Vector3(0, -1, 0);
+	const up = new Vector3(0, 1, 0);
 	new GLTFLoader()
 		.setPath('include/models/gltf/')
 		.load('collision-world.glb', function (gltf) {
@@ -199,11 +201,12 @@ function init() {
 
 			scene.add(room);
 
-			initPhysics(room);
-
-			for (let i = 0; i < BALL_COUNT; i++) {
-				const position = positions[i];
-				physicsBodies[i] = generateObject(position);
+			if (ENABLE_AMMO) {
+				initPhysics(room);
+				for (let i = 0; i < BALL_COUNT; i++) {
+					const position = positions[i];
+					physicsBodies[i] = generateObject(position);
+				}
 			}
 
 			camera.position.x = 0;
@@ -367,8 +370,10 @@ function init() {
 			sunAnglePrev.theta = sunAngle.theta;
 		}
 
-		// updatePhysics(deltaTime);
-		// updateCollision();
+		if (ENABLE_AMMO) {
+			updatePhysics(deltaTime);
+			updateCollision();
+		}
 
 		renderer.render(scene, camera);
 
@@ -379,8 +384,8 @@ function init() {
 
 	const floorArea = [];
 	const addPoint = (position) => {
-		const radius = 0.5;
-		const lineRadius = radius * 0.5;
+		const radius = 0.1;
+		const lineRadius = radius * 0.25;
 		const geometry = new THREE.SphereGeometry(radius, 18, 9);
 
 		const sphere = new THREE.Mesh(geometry, material);
@@ -389,49 +394,74 @@ function init() {
 		sphere.receiveShadow = true;
 		scene.add(sphere);
 		if (floorArea.length > 0) {
-			const previousPoint = floorArea[floorArea.length - 1];
+			const previousSphere = floorArea[floorArea.length - 1];
+			const previousPoint = previousSphere.position;
 
+			const ray = position.clone();
+			ray.sub(previousPoint);
+
+			const length = previousPoint.distanceTo(position);
 			const cylinderGeometry = new THREE.CylinderGeometry(lineRadius, lineRadius, 1, 9, 1, true);
 
 			const cylinder = new THREE.Mesh(cylinderGeometry, material);
-			cylinder.position.copy(previousPoint);
-			cylinder.position.y = 1;
-			// cylinder.castShadow = true;
 			cylinder.receiveShadow = true;
+
+			const unitRay = ray.clone().normalize();
+			cylinder.quaternion.setFromUnitVectors(up, unitRay);
+
+			cylinder.position.copy(previousPoint);
+			ray.multiplyScalar(0.5);
+			cylinder.position.add(ray);
+
 			cylinder.scale.x = 1;
-			cylinder.scale.y = 10;
+			cylinder.scale.y = length;
 			cylinder.scale.z = 1;
 			scene.add(cylinder);
 		}
-		floorArea.push(position);
+		floorArea.push(sphere);
 	}
-	const hitTester = (event) => {
-		const pointer = new THREE.Vector2();
-		const raycaster = new THREE.Raycaster(camera.position, down);
 
-		pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-		pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
-		raycaster.setFromCamera(pointer, camera);
-		const intersects = raycaster.intersectObjects(scene.children);
-		const hit = intersects[0];
-		if (hit) {
-			addPoint(hit.point);
-		}
+	let dragging = false;
+	let mouseDown = false;
+	const mousedownEvent = (event) => {
+		mouseDown = true;
+		dragging = false;
 	}
-	renderer.domElement.addEventListener('click', hitTester);
+	const mousemoveEvent = (event) => {
+		if (mouseDown) dragging = true;
+	}
+	const mouseupEvent = (event) => {
+		if (!dragging) {
+			const pointer = new THREE.Vector2();
+			const raycaster = new THREE.Raycaster(camera.position, down);
+
+			pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+			pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+			raycaster.setFromCamera(pointer, camera);
+			const intersects = raycaster.intersectObjects(scene.children);
+			const hit = intersects[0];
+			if (hit) {
+				addPoint(hit.point);
+			}
+		}
+		mouseDown = false;
+		dragging = false;
+	}
+	renderer.domElement.addEventListener('mousedown', mousedownEvent);
+	window.addEventListener('mousemove', mousemoveEvent);
+	window.addEventListener('mouseup', mouseupEvent);
 }
 
-const script = document.createElement('script');
-script.onload = function () {
-	Ammo().then(function (AmmoLib) {
-		// Ammo = AmmoLib;
+if (ENABLE_AMMO) {
+	const script = document.createElement('script');
+	script.onload = function () {
+		Ammo().then(function (AmmoLib) {
+			// Ammo = AmmoLib;
+			init();
+		});
+	};
+	script.src = './include/ammo.wasm.js';
+	document.head.appendChild(script); //or something of the likes
+}
 
-		init();
-
-	});
-
-	// init();
-};
-script.src = './include/ammo.wasm.js';
-
-document.head.appendChild(script); //or something of the likes
+init();
