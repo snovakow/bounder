@@ -187,6 +187,9 @@ function init() {
 			// room.position.y = -10;
 			room.scale.setScalar(1);
 			room.traverse((node) => {
+				node.userData.framing = {
+					base: true
+				}
 				if (node.material) {
 					if (node.material.map) node.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
 					node.material.envMapIntensity = 0.3;
@@ -381,6 +384,43 @@ function init() {
 	}
 	renderer.setAnimationLoop(animate);
 
+	const placeLink = (link, node1, node2) => {
+		const ray = node1.node.position.clone();
+		ray.sub(node2.node.position);
+
+		const unitRay = ray.clone().normalize();
+		ray.multiplyScalar(0.5);
+
+		link.quaternion.setFromUnitVectors(up, unitRay);
+		link.position.copy(node2.node.position);
+		link.position.add(ray);
+
+		link.scale.y = node2.node.position.distanceTo(node1.node.position);
+	}
+
+	class FrameSeg {
+		constructor(object, link) {
+			this.node = object;
+			this.link = link;
+			Object.freeze(this);
+		}
+	}
+	class FrameNode {
+		constructor(object) {
+			this.node = object;
+			this.nextSeg = null;
+			this.prevSeg = null;
+			Object.seal(this);
+		}
+	}
+	class FrameData {
+		constructor(node) {
+			this.node = true;
+			this.rep = node;
+			Object.freeze(this);
+		}
+	}
+
 	const floorArea = [];
 	const addPoint = (position) => {
 		const radius = 0.1;
@@ -388,58 +428,49 @@ function init() {
 		const geometry = new THREE.SphereGeometry(radius, 18, 9);
 
 		const sphere = new THREE.Mesh(geometry, material);
-		sphere.userData.framing = {
-			node: true
-		};
+		const add = new FrameNode(sphere);
+		sphere.userData.framing = new FrameData(add);
 
-		console.log(sphere.userData);
 		sphere.position.copy(position);
 		// sphere.castShadow = true;
 		sphere.receiveShadow = true;
 		scene.add(sphere);
+
 		if (floorArea.length > 0) {
-			const previousSphere = floorArea[floorArea.length - 1];
-			const previousPoint = previousSphere.position;
+			const previous = floorArea[floorArea.length - 1];
+			const previousPoint = previous.node.position;
 
-			const ray = position.clone();
-			ray.sub(previousPoint);
-
-			const length = previousPoint.distanceTo(position);
 			const cylinderGeometry = new THREE.CylinderGeometry(lineRadius, lineRadius, 1, 9, 1, true);
-
 			const cylinder = new THREE.Mesh(cylinderGeometry, material);
 			cylinder.userData.framing = {
-				node: false
+				node: false,
 			};
 			cylinder.receiveShadow = true;
 
-			const unitRay = ray.clone().normalize();
-			cylinder.quaternion.setFromUnitVectors(up, unitRay);
+			placeLink(cylinder, previous, add);
+			previous.nextSeg = new FrameSeg(add.node, cylinder);
+			add.prevSeg = new FrameSeg(previous.node, cylinder);
 
-			cylinder.position.copy(previousPoint);
-			ray.multiplyScalar(0.5);
-			cylinder.position.add(ray);
-
-			cylinder.scale.x = 1;
-			cylinder.scale.y = length;
-			cylinder.scale.z = 1;
 			scene.add(cylinder);
 		}
-		floorArea.push(sphere);
+		floorArea.push(add);
 	}
 
-	const moveFramingNode = (node, position) => {
-		console.log(node, position);
-		node.position.copy(position);
+	const moveFramingNode = (framingNode, position) => {
+		framingNode.node.position.copy(position);
+		if (framingNode.prevSeg) {
+			placeLink(framingNode.prevSeg.link, framingNode.prevSeg, framingNode);
+		}
+		if (framingNode.nextSeg) {
+			placeLink(framingNode.nextSeg.link, framingNode, framingNode.nextSeg);
+		}
+		if (framingNode.prevSeg && framingNode.nextSeg) {
+			placeLink(framingNode.prevSeg.link, framingNode.prevSeg, framingNode);
+			placeLink(framingNode.nextSeg.link, framingNode, framingNode.nextSeg);
+		}
 	}
 
-	let dragging = false;
-	let mouseDown = false;
-	let selectedFrameNode = null;
-	const mousedownEvent = (event) => {
-		mouseDown = true;
-		dragging = false;
-
+	const collisionDetect = (event) => {
 		const pointer = new THREE.Vector2();
 		const raycaster = new THREE.Raycaster(camera.position, down);
 
@@ -447,11 +478,26 @@ function init() {
 		pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
 		raycaster.setFromCamera(pointer, camera);
 		const intersects = raycaster.intersectObjects(scene.children);
+		const framingHits = [];
+		for (const hit of intersects) {
+			if (hit.object.userData.framing) framingHits.push(hit);
+		}
+
+		return framingHits;
+	}
+	let dragging = false;
+	let mouseDown = false;
+	let selectedFrameNode = null;
+	const mousedownEvent = (event) => {
+		mouseDown = true;
+		dragging = false;
+
+		const intersects = collisionDetect(event);
 		const hit = intersects[0];
 		if (hit) {
 			if (hit.object.userData.framing) {
 				if (hit.object.userData.framing.node) {
-					selectedFrameNode = hit.object;
+					selectedFrameNode = hit.object.userData.framing.rep;
 					controls.enabled = false;
 				}
 			}
@@ -462,17 +508,9 @@ function init() {
 		event.stopPropagation();
 
 		if (selectedFrameNode) {
-			const pointer = new THREE.Vector2();
-			const raycaster = new THREE.Raycaster();
-
-			pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-			pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
-			raycaster.setFromCamera(pointer, camera);
-			const intersects = raycaster.intersectObjects(scene.children);
+			const intersects = collisionDetect(event);
 			for (const hit of intersects) {
-				if (hit.object.userData.framing?.node) {
-					continue;
-				} else {
+				if (hit.object.userData.framing.base) {
 					moveFramingNode(selectedFrameNode, hit.point);
 					break;
 				}
@@ -481,21 +519,9 @@ function init() {
 	}
 	const mouseupEvent = (event) => {
 		if (!dragging) {
-			const pointer = new THREE.Vector2();
-			const raycaster = new THREE.Raycaster();
-
-			pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-			pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
-			raycaster.setFromCamera(pointer, camera);
-			const intersects = raycaster.intersectObjects(scene.children);
+			const intersects = collisionDetect(event);
 			const hit = intersects[0];
 			if (hit) {
-				let hitFraming = false;
-				if (hit.object.userData.framing) {
-					if (hit.object.userData.framing.node) {
-						hitFraming = true;
-					}
-				}
 				addPoint(hit.point);
 			}
 		}
