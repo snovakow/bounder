@@ -438,11 +438,11 @@ function init() {
 
 		if (floorArea.length > 0) {
 			const previous = floorArea[floorArea.length - 1];
-			const previousPoint = previous.node.position;
 
 			const cylinderGeometry = new THREE.CylinderGeometry(lineRadius, lineRadius, 1, 9, 1, true);
 			const cylinder = new THREE.Mesh(cylinderGeometry, material);
 			cylinder.userData.framing = {
+				link: true,
 				node: false,
 			};
 			cylinder.receiveShadow = true;
@@ -500,6 +500,16 @@ function init() {
 					selectedFrameNode = hit.object.userData.framing.rep;
 					controls.enabled = false;
 				}
+				if (hit.object.userData.framing.link) {
+					const intersects = collisionDetect(event);
+					const hit = intersects[0];
+					if (hit) {
+						addPoint(hit.point);
+					}
+		
+					selectedFrameNode = hit.object.userData.framing.rep;
+					controls.enabled = false;
+				}
 			}
 		}
 	}
@@ -545,6 +555,6 @@ if (ENABLE_AMMO) {
 	};
 	script.src = './include/ammo.wasm.js';
 	document.head.appendChild(script); //or something of the likes
+} else {
+	init();
 }
-
-init();
