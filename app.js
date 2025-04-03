@@ -384,52 +384,74 @@ function init() {
 	}
 	renderer.setAnimationLoop(animate);
 
+	class FrameArray extends Array {
+		constructor(...args) {
+			super(...args);
+			this.focusIndex = -1;
+		}
+		focusNode(framingNode) {
+			for (const [i, node] of this.entries()) {
+				if (node === framingNode) {
+					this.focusIndex = i;
+					return true;
+				}
+			}
+			this.focusIndex = -1;
+			return false;
+		}
+		isNode() {
+			if (this.focusIndex < 0) return false;
+			return index % 2 === 0;
+		}
+		isLink() {
+			if (this.focusIndex < 0) return false;
+			return index % 2 === 1;
+		}
+		nextNode() {
+			if (this.isNode && this.focusIndex < this.length - 2) return this[this.focusIndex + 2];
+			if (this.isLink && this.focusIndex < this.length - 1) return this[this.focusIndex + 1];
+			return null;
+		}
+		prevNode() {
+			if (this.isNode && this.focusIndex > 1) return this[this.focusIndex - 2];
+			if (this.isLink && this.focusIndex > 0) return this[this.focusIndex - 1];
+			return null;
+		}
+		nextLink() {
+			if (this.isNode && this.focusIndex < this.length - 1) return this[this.focusIndex + 1];
+			return null;
+		}
+		prevLink() {
+			if (this.isNode && this.focusIndex > 0) return this[this.focusIndex - 1];
+			return null;
+		}
+	}
+
 	const placeLink = (link, node1, node2) => {
-		const ray = node1.node.position.clone();
-		ray.sub(node2.node.position);
+		const ray = node1.position.clone();
+		ray.sub(node2.position);
 
 		const unitRay = ray.clone().normalize();
 		ray.multiplyScalar(0.5);
 
 		link.quaternion.setFromUnitVectors(up, unitRay);
-		link.position.copy(node2.node.position);
+		link.position.copy(node2.position);
 		link.position.add(ray);
 
-		link.scale.y = node2.node.position.distanceTo(node1.node.position);
+		link.scale.y = node2.position.distanceTo(node1.position);
 	}
 
-	class FrameSeg {
-		constructor(object, link) {
-			this.node = object;
-			this.link = link;
-			Object.freeze(this);
-		}
-	}
-	class FrameNode {
-		constructor(object) {
-			this.node = object;
-			this.nextSeg = null;
-			this.prevSeg = null;
-			Object.seal(this);
-		}
-	}
-	class FrameData {
-		constructor(node) {
-			this.node = true;
-			this.rep = node;
-			Object.freeze(this);
-		}
-	}
-
-	const floorArea = [];
+	const floorArea = new FrameArray();
 	const addPoint = (position) => {
 		const radius = 0.1;
 		const lineRadius = radius * 0.25;
 		const geometry = new THREE.SphereGeometry(radius, 18, 9);
 
 		const sphere = new THREE.Mesh(geometry, material);
-		const add = new FrameNode(sphere);
-		sphere.userData.framing = new FrameData(add);
+		sphere.userData.framing = {
+			node: true,
+			rep: sphere,
+		}
 
 		sphere.position.copy(position);
 		// sphere.castShadow = true;
@@ -447,27 +469,23 @@ function init() {
 			};
 			cylinder.receiveShadow = true;
 
-			placeLink(cylinder, previous, add);
-			previous.nextSeg = new FrameSeg(add.node, cylinder);
-			add.prevSeg = new FrameSeg(previous.node, cylinder);
+			placeLink(cylinder, previous, sphere);
 
 			scene.add(cylinder);
+			floorArea.push(cylinder);
 		}
-		floorArea.push(add);
+		floorArea.push(sphere);
 	}
 
 	const moveFramingNode = (framingNode, position) => {
-		framingNode.node.position.copy(position);
-		if (framingNode.prevSeg) {
-			placeLink(framingNode.prevSeg.link, framingNode.prevSeg, framingNode);
-		}
-		if (framingNode.nextSeg) {
-			placeLink(framingNode.nextSeg.link, framingNode, framingNode.nextSeg);
-		}
-		if (framingNode.prevSeg && framingNode.nextSeg) {
-			placeLink(framingNode.prevSeg.link, framingNode.prevSeg, framingNode);
-			placeLink(framingNode.nextSeg.link, framingNode, framingNode.nextSeg);
-		}
+		const focused = floorArea.focusNode(framingNode);
+		if (!focused) return;
+
+		framingNode.position.copy(position);
+		const prevNode = floorArea.prevNode();
+		if (prevNode) placeLink(floorArea.prevLink(), prevNode, framingNode);
+		const nextNode = floorArea.nextNode();
+		if (nextNode) placeLink(floorArea.nextLink(), framingNode, nextNode);
 	}
 
 	const collisionDetect = (event) => {
@@ -496,17 +514,19 @@ function init() {
 		const hit = intersects[0];
 		if (hit) {
 			if (hit.object.userData.framing) {
+				let triggered = false;
 				if (hit.object.userData.framing.node) {
-					selectedFrameNode = hit.object.userData.framing.rep;
-					controls.enabled = false;
+					triggered = true;
 				}
 				if (hit.object.userData.framing.link) {
 					const intersects = collisionDetect(event);
 					const hit = intersects[0];
 					if (hit) {
-						addPoint(hit.point);
+						addPoint(hit.point, hit.object.userData.framing.rep);
+						triggered = true;
 					}
-		
+				}
+				if (triggered) {
 					selectedFrameNode = hit.object.userData.framing.rep;
 					controls.enabled = false;
 				}
