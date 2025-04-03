@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import * as Framing from './framing.js';
 import { Vector3 } from 'three';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -383,49 +384,6 @@ function init() {
 	}
 	renderer.setAnimationLoop(animate);
 
-	class FrameArray extends Array {
-		constructor(...args) {
-			super(...args);
-			this.focusIndex = -1;
-		}
-		focusNode(framingNode) {
-			for (const [i, node] of this.entries()) {
-				if (node === framingNode) {
-					this.focusIndex = i;
-					return true;
-				}
-			}
-			this.focusIndex = -1;
-			return false;
-		}
-		isNode() {
-			if (this.focusIndex < 0) return false;
-			return index % 2 === 0;
-		}
-		isLink() {
-			if (this.focusIndex < 0) return false;
-			return index % 2 === 1;
-		}
-		nextNode() {
-			if (this.isNode && this.focusIndex < this.length - 2) return this[this.focusIndex + 2];
-			if (this.isLink && this.focusIndex < this.length - 1) return this[this.focusIndex + 1];
-			return null;
-		}
-		prevNode() {
-			if (this.isNode && this.focusIndex > 1) return this[this.focusIndex - 2];
-			if (this.isLink && this.focusIndex > 0) return this[this.focusIndex - 1];
-			return null;
-		}
-		nextLink() {
-			if (this.isNode && this.focusIndex < this.length - 1) return this[this.focusIndex + 1];
-			return null;
-		}
-		prevLink() {
-			if (this.isNode && this.focusIndex > 0) return this[this.focusIndex - 1];
-			return null;
-		}
-	}
-
 	const placeLink = (link, node1, node2) => {
 		const ray = node1.position.clone();
 		ray.sub(node2.position);
@@ -440,7 +398,7 @@ function init() {
 		link.scale.y = node2.position.distanceTo(node1.position);
 	}
 
-	const floorArea = new FrameArray();
+	const floorArea = new Framing.FrameArray();
 	const addPoint = (position) => {
 		const radius = 0.1;
 		const lineRadius = radius * 0.25;
