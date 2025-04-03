@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { Vector3 } from 'three';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 import { Sky } from 'three/addons/objects/Sky.js';
 
