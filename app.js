@@ -138,6 +138,9 @@ function init() {
 
 	material.envMap = cubeRenderTarget.texture;
 
+	const down = new Vector3(0, -1, 0);
+	Object.freeze(down);
+
 	const localForward = new Vector3(0, 0, -1);
 	new GLTFLoader()
 		.setPath('include/models/gltf/')
@@ -175,8 +178,6 @@ function init() {
 			Env.camera.position.y = 20;
 			Env.camera.position.z = 0;
 
-			const down = new Vector3(0, -1, 0);
-			Object.freeze(down);
 			const raycaster = new THREE.Raycaster(Env.camera.position, down);
 			const intersects = raycaster.intersectObject(room);
 			const hit = intersects[0];
@@ -489,12 +490,25 @@ function init() {
 		Env.camera.localToWorld(dir);
 		dir.y = Env.camera.position.y;
 
-		const target = dir.clone();
-		target.sub(Env.camera.position);
-
 		Env.camera.position.copy(dir);
 
-		Env.controls.target.add(target);
+		const raycaster = new THREE.Raycaster(Env.camera.position, down);
+		const intersects = raycaster.intersectObject(room);
+		const hit = intersects[0];
+		if (hit) {
+			Env.camera.position.y = 1.6 + hit.point.y;
+			// camera.rotation.x=1;
+			// camera.rotation.y=1;
+			// camera.rotation.z=1;
+			// controls.update();
+		}
+
+		const direction = new Vector3();
+		Env.camera.getWorldDirection(direction);
+		direction.y = 0;
+		direction.add(Env.camera.position);
+
+		Env.controls.target.copy(direction);
 	}
 	window.addEventListener('keydown', keydown);
 }
