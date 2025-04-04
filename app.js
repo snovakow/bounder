@@ -10,16 +10,12 @@ import * as Framing from './framing.js';
 import * as Env from './environment.js';
 
 const BALL_COUNT = 100;
-
 const ENABLE_AMMO = false;
 
 function init() {
-	const down = new Vector3(0, -1, 0);
-	Object.freeze(down);
-	
 	const sunAngle = {
 		phi: 45,
-		theta: 180,
+		theta: 90,
 	};
 	const sunAnglePrev = { ...sunAngle };
 	const sky = new Sky();
@@ -142,6 +138,7 @@ function init() {
 
 	material.envMap = cubeRenderTarget.texture;
 
+	const localForward = new Vector3(0, 0, -1);
 	new GLTFLoader()
 		.setPath('include/models/gltf/')
 		.load('collision-world.glb', function (gltf) {
@@ -178,6 +175,8 @@ function init() {
 			Env.camera.position.y = 20;
 			Env.camera.position.z = 0;
 
+			const down = new Vector3(0, -1, 0);
+			Object.freeze(down);
 			const raycaster = new THREE.Raycaster(Env.camera.position, down);
 			const intersects = raycaster.intersectObject(room);
 			const hit = intersects[0];
@@ -189,7 +188,7 @@ function init() {
 				// camera.rotation.z=1;
 				// controls.update();
 			}
-			Env.controls.target.set(0, 0, -1);
+			Env.controls.target.copy(localForward);
 		});
 
 	const geometry = new THREE.SphereGeometry(0.4, 24, 12);
@@ -279,16 +278,16 @@ function init() {
 	gui.add(sunAngle, 'phi', -90, 90).name('Sun phi');
 	gui.add(sunAngle, 'theta', -180, 180).name('Sun theta');
 
-	gui.add(sky.material.uniforms.turbidity, 'value', 0, 20).name('turbidity').onChange(()=>{
+	gui.add(sky.material.uniforms.turbidity, 'value', 0, 20).name('turbidity').onChange(() => {
 		cubeCamera.update(Env.renderer, skyScene);
 	});
-	gui.add(sky.material.uniforms.rayleigh, 'value', 0, 4).name('rayleigh').onChange(()=>{
+	gui.add(sky.material.uniforms.rayleigh, 'value', 0, 4).name('rayleigh').onChange(() => {
 		cubeCamera.update(Env.renderer, skyScene);
 	});
-	gui.add(sky.material.uniforms.mieCoefficient, 'value', 0, 0.1).name('mieCoefficient').onChange(()=>{
+	gui.add(sky.material.uniforms.mieCoefficient, 'value', 0, 0.1).name('mieCoefficient').onChange(() => {
 		cubeCamera.update(Env.renderer, skyScene);
 	});
-	gui.add(sky.material.uniforms.mieDirectionalG, 'value', 0, 1).name('mieDirectionalG').onChange(()=>{
+	gui.add(sky.material.uniforms.mieDirectionalG, 'value', 0, 1).name('mieDirectionalG').onChange(() => {
 		cubeCamera.update(Env.renderer, skyScene);
 	});
 
@@ -469,6 +468,35 @@ function init() {
 	Env.renderer.domElement.addEventListener('mousedown', mousedownEvent);
 	window.addEventListener('mousemove', mousemoveEvent);
 	window.addEventListener('mouseup', mouseupEvent);
+
+	const keydown = (event) => {
+		const dir = new Vector3();
+		if (event.code === "KeyW") {
+			dir.z -= 0.1;
+		}
+		else if (event.code === "KeyS") {
+			dir.z += 0.1;
+		}
+		else if (event.code === "KeyA") {
+			dir.x -= 0.1;
+		}
+		else if (event.code === "KeyD") {
+			dir.x += 0.1;
+		} else {
+			return;
+		}
+
+		Env.camera.localToWorld(dir);
+		dir.y = Env.camera.position.y;
+
+		const target = dir.clone();
+		target.sub(Env.camera.position);
+
+		Env.camera.position.copy(dir);
+
+		Env.controls.target.add(target);
+	}
+	window.addEventListener('keydown', keydown);
 }
 
 if (ENABLE_AMMO) {
