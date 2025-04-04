@@ -41,4 +41,18 @@ class FrameArray extends Array {
     }
 }
 
-export { FrameArray };
+const placeLink = (link, node1, node2) => {
+    const ray = node1.position.clone();
+    ray.sub(node2.position);
+
+    const unitRay = ray.clone().normalize();
+    ray.multiplyScalar(0.5);
+
+    link.quaternion.setFromUnitVectors(up, unitRay);
+    link.position.copy(node2.position);
+    link.position.add(ray);
+
+    link.scale.y = node2.position.distanceTo(node1.position);
+}
+
+export { FrameArray, placeLink };

@@ -1,54 +1,25 @@
 import * as THREE from 'three';
-import * as Framing from './framing.js';
 import { Vector3 } from 'three';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
 import { Sky } from 'three/addons/objects/Sky.js';
-
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const BALL_COUNT = 100;
-const degToRad = Math.PI / 180;
-const radToDeg = 180 / Math.PI;
+import * as Util from './util.js';
+import * as Framing from './framing.js';
+import * as Env from './environment.js';
 
-let camera, scene, stats, controls;
+const BALL_COUNT = 100;
 
 const ENABLE_AMMO = false;
 
 function init() {
-	const onWindowResized = () => {
-		renderer.setSize(window.innerWidth, window.innerHeight);
-
-		camera.aspect = window.innerWidth / window.innerHeight;
-		camera.updateProjectionMatrix();
-	}
-
-	const renderer = new THREE.WebGLRenderer({ antialias: true });
-	renderer.setPixelRatio(window.devicePixelRatio);
-	renderer.setSize(window.innerWidth, window.innerHeight);
-	renderer.toneMapping = THREE.ReinhardToneMapping;
-	renderer.toneMappingExposure = 1;
-
-	document.body.appendChild(renderer.domElement);
-
-	renderer.domElement.style.position = 'fixed';
-	renderer.domElement.style.top = '0px';
-	renderer.domElement.style.left = '0px';
-	renderer.domElement.style.width = '100%';
-	renderer.domElement.style.height = '100%';
-
-	renderer.shadowMap.enabled = true;
-	// renderer.shadowMap.type = THREE.BasicShadowMap;
-
-	window.addEventListener('resize', onWindowResized);
+	let scene, stats, controls;
 
 	stats = new Stats();
 	document.body.appendChild(stats.dom);
-
-	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
 
 	scene = new THREE.Scene();
 
@@ -60,7 +31,7 @@ function init() {
 	const sky = new Sky();
 	sky.scale.setScalar(100);
 
-	const sunPosition = new Vector3().setFromSphericalCoords(1, sunAngle.phi * degToRad, sunAngle.theta * degToRad);
+	const sunPosition = new Vector3().setFromSphericalCoords(1, sunAngle.phi * Util.degToRad, sunAngle.theta * Util.degToRad);
 	sky.material.uniforms.sunPosition.value = sunPosition;
 
 	scene.add(sky);
@@ -79,7 +50,7 @@ function init() {
 
 	// light.shadow.camera.near = dLight / 30;
 	// light.shadow.camera.far = dLight;
-	light.shadow.camera.near = 1;
+	light.shadow.camera.near = 0.1;
 	light.shadow.camera.far = 1000;
 
 	light.shadow.bias = -0.0001;
@@ -170,7 +141,7 @@ function init() {
 	cubeRenderTarget.texture.type = THREE.HalfFloatType;
 
 	const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
-	cubeCamera.update(renderer, scene);
+	cubeCamera.update(Env.renderer, scene);
 	scene.background = cubeRenderTarget.texture;
 	// scene.environment = cubeRenderTarget.texture;
 
@@ -191,7 +162,7 @@ function init() {
 					base: true
 				}
 				if (node.material) {
-					if (node.material.map) node.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+					if (node.material.map) node.material.map.anisotropy = Env.renderer.capabilities.getMaxAnisotropy();
 					node.material.envMapIntensity = 0.3;
 					node.material.envMap = cubeRenderTarget.texture;
 				}
@@ -212,18 +183,18 @@ function init() {
 				}
 			}
 
-			camera.position.x = 0;
-			camera.position.y = 20;
-			camera.position.z = 0;
+			Env.camera.position.x = 0;
+			Env.camera.position.y = 20;
+			Env.camera.position.z = 0;
 
-			controls = new OrbitControls(camera, renderer.domElement);
+			controls = new OrbitControls(Env.camera, Env.renderer.domElement);
 
-			const raycaster = new THREE.Raycaster(camera.position, down);
+			const raycaster = new THREE.Raycaster(Env.camera.position, down);
 			const intersects = raycaster.intersectObject(room);
 			const hit = intersects[0];
 			if (hit) {
-				camera.position.copy(hit.point);
-				camera.position.y += 1.6;
+				Env.camera.position.copy(hit.point);
+				Env.camera.position.y += 1.6;
 				// camera.rotation.x=1;
 				// camera.rotation.y=1;
 				// camera.rotation.z=1;
@@ -328,7 +299,7 @@ function init() {
 	gui.add(light, 'intensity', 0, 1).name('intensity');
 
 	gui.add(light.shadow, 'bias', -0.001, 0).name('bias');
-	gui.add(renderer, 'toneMappingExposure', 0, 1).name('toneMappingExposure');
+	gui.add(Env.renderer, 'toneMappingExposure', 0, 1).name('toneMappingExposure');
 
 	// const shadowMapTypes = {
 	// 	BasicShadowMap: THREE.BasicShadowMap,
@@ -349,7 +320,7 @@ function init() {
 		AgXToneMapping: THREE.AgXToneMapping,
 		NeutralToneMapping: THREE.NeutralToneMapping,
 	};
-	gui.add(renderer, 'toneMapping', toneMappingFormats).name('toneMapping');
+	gui.add(Env.renderer, 'toneMapping', toneMappingFormats).name('toneMapping');
 
 	let previousTime = 0;
 	const animate = (msTime) => {
@@ -360,10 +331,11 @@ function init() {
 		const deltaTime = msTime - previousTime;
 		previousTime = msTime;
 
+		Env.updatePixelRatio();
 		if (controls) controls.update(deltaTime);
 
 		if (sunAngle.phi !== sunAnglePrev.phi || sunAngle.theta !== sunAnglePrev.theta) {
-			sunPosition.setFromSphericalCoords(1, sunAngle.phi * degToRad, sunAngle.theta * degToRad);
+			sunPosition.setFromSphericalCoords(1, sunAngle.phi * Util.degToRad, sunAngle.theta * Util.degToRad);
 			light.position.copy(sunPosition);
 			light.position.setLength(10);
 			// sky.material.uniforms.sunPosition.value.copy(sunPosition);
@@ -377,26 +349,12 @@ function init() {
 			updateCollision();
 		}
 
-		renderer.render(scene, camera);
+		Env.renderer.render(scene, Env.camera);
 
 		stats.update();
 
 	}
-	renderer.setAnimationLoop(animate);
-
-	const placeLink = (link, node1, node2) => {
-		const ray = node1.position.clone();
-		ray.sub(node2.position);
-
-		const unitRay = ray.clone().normalize();
-		ray.multiplyScalar(0.5);
-
-		link.quaternion.setFromUnitVectors(up, unitRay);
-		link.position.copy(node2.position);
-		link.position.add(ray);
-
-		link.scale.y = node2.position.distanceTo(node1.position);
-	}
+	Env.renderer.setAnimationLoop(animate);
 
 	const floorArea = new Framing.FrameArray();
 	const addPoint = (position) => {
@@ -426,7 +384,7 @@ function init() {
 			};
 			cylinder.receiveShadow = true;
 
-			placeLink(cylinder, previous, sphere);
+			Framing.placeLink(cylinder, previous, sphere);
 
 			scene.add(cylinder);
 			floorArea.push(cylinder);
@@ -440,18 +398,18 @@ function init() {
 
 		framingNode.position.copy(position);
 		const prevNode = floorArea.prevNode();
-		if (prevNode) placeLink(floorArea.prevLink(), prevNode, framingNode);
+		if (prevNode) Framing.placeLink(floorArea.prevLink(), prevNode, framingNode);
 		const nextNode = floorArea.nextNode();
-		if (nextNode) placeLink(floorArea.nextLink(), framingNode, nextNode);
+		if (nextNode) Framing.placeLink(floorArea.nextLink(), framingNode, nextNode);
 	}
 
 	const collisionDetect = (event) => {
 		const pointer = new THREE.Vector2();
-		const raycaster = new THREE.Raycaster(camera.position, down);
+		const raycaster = new THREE.Raycaster(Env.camera.position, down);
 
 		pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
 		pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
-		raycaster.setFromCamera(pointer, camera);
+		raycaster.setFromCamera(pointer, Env.camera);
 		const intersects = raycaster.intersectObjects(scene.children);
 		const framingHits = [];
 		for (const hit of intersects) {
@@ -517,7 +475,7 @@ function init() {
 		mouseDown = false;
 		dragging = false;
 	}
-	renderer.domElement.addEventListener('mousedown', mousedownEvent);
+	Env.renderer.domElement.addEventListener('mousedown', mousedownEvent);
 	window.addEventListener('mousemove', mousemoveEvent);
 	window.addEventListener('mouseup', mouseupEvent);
 }
