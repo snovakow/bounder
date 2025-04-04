@@ -43,8 +43,8 @@ class FrameArray extends Array {
     }
 }
 
-const up = new Vector3(0, 1, 0);
-Object.freeze(up);
+const upBasis = new Vector3(0, 1, 0);
+Object.freeze(upBasis);
 const placeLink = (link, node1, node2) => {
     const ray = node1.position.clone();
     ray.sub(node2.position);
@@ -52,7 +52,7 @@ const placeLink = (link, node1, node2) => {
     const unitRay = ray.clone().normalize();
     ray.multiplyScalar(0.5);
 
-    link.quaternion.setFromUnitVectors(up, unitRay);
+    link.quaternion.setFromUnitVectors(upBasis, unitRay);
     link.position.copy(node2.position);
     link.position.add(ray);
 
