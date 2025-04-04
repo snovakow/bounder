@@ -1,10 +1,8 @@
 import * as THREE from 'three';
 import { Vector3 } from 'three';
 
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-import Stats from 'three/addons/libs/stats.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import * as Util from './util.js';
@@ -16,13 +14,9 @@ const BALL_COUNT = 100;
 const ENABLE_AMMO = false;
 
 function init() {
-	let scene, stats, controls;
-
-	stats = new Stats();
-	document.body.appendChild(stats.dom);
-
-	scene = new THREE.Scene();
-
+	const down = new Vector3(0, -1, 0);
+	Object.freeze(down);
+	
 	const sunAngle = {
 		phi: 45,
 		theta: 180,
@@ -34,7 +28,8 @@ function init() {
 	const sunPosition = new Vector3().setFromSphericalCoords(1, sunAngle.phi * Util.degToRad, sunAngle.theta * Util.degToRad);
 	sky.material.uniforms.sunPosition.value = sunPosition;
 
-	scene.add(sky);
+	const skyScene = new THREE.Scene();
+	skyScene.add(sky);
 
 	// const hemisphereLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
 	// scene.add( hemisphereLight );
@@ -50,7 +45,7 @@ function init() {
 
 	// light.shadow.camera.near = dLight / 30;
 	// light.shadow.camera.far = dLight;
-	light.shadow.camera.near = 0.1;
+	light.shadow.camera.near = 0.3;
 	light.shadow.camera.far = 1000;
 
 	light.shadow.bias = -0.0001;
@@ -60,7 +55,7 @@ function init() {
 	light.position.copy(sunPosition);
 	light.position.setLength(10);
 
-	scene.add(light);
+	Env.scene.add(light);
 
 	const material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
 	let room = null;
@@ -140,17 +135,13 @@ function init() {
 	const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(2048);
 	cubeRenderTarget.texture.type = THREE.HalfFloatType;
 
-	const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
-	cubeCamera.update(Env.renderer, scene);
-	scene.background = cubeRenderTarget.texture;
+	const cubeCamera = new THREE.CubeCamera(Env.camera.near, Env.camera.far, cubeRenderTarget);
+	cubeCamera.update(Env.renderer, skyScene);
+	Env.scene.background = cubeRenderTarget.texture;
 	// scene.environment = cubeRenderTarget.texture;
 
 	material.envMap = cubeRenderTarget.texture;
 
-	scene.remove(sky);
-
-	const down = new Vector3(0, -1, 0);
-	const up = new Vector3(0, 1, 0);
 	new GLTFLoader()
 		.setPath('include/models/gltf/')
 		.load('collision-world.glb', function (gltf) {
@@ -173,7 +164,7 @@ function init() {
 				}
 			});
 
-			scene.add(room);
+			Env.scene.add(room);
 
 			if (ENABLE_AMMO) {
 				initPhysics(room);
@@ -187,8 +178,6 @@ function init() {
 			Env.camera.position.y = 20;
 			Env.camera.position.z = 0;
 
-			controls = new OrbitControls(Env.camera, Env.renderer.domElement);
-
 			const raycaster = new THREE.Raycaster(Env.camera.position, down);
 			const intersects = raycaster.intersectObject(room);
 			const hit = intersects[0];
@@ -200,8 +189,7 @@ function init() {
 				// camera.rotation.z=1;
 				// controls.update();
 			}
-			controls.target.set(0, 0, -1);
-
+			Env.controls.target.set(0, 0, -1);
 		});
 
 	const geometry = new THREE.SphereGeometry(0.4, 24, 12);
@@ -211,7 +199,7 @@ function init() {
 	mesh.receiveShadow = true;
 
 	mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); // will be updated every frame
-	scene.add(mesh);
+	Env.scene.add(mesh);
 
 	const dummy = new THREE.Object3D();
 
@@ -291,10 +279,18 @@ function init() {
 	gui.add(sunAngle, 'phi', -90, 90).name('Sun phi');
 	gui.add(sunAngle, 'theta', -180, 180).name('Sun theta');
 
-	gui.add(sky.material.uniforms.turbidity, 'value', 0, 20).name('turbidity');
-	gui.add(sky.material.uniforms.rayleigh, 'value', 0, 4).name('rayleigh');
-	gui.add(sky.material.uniforms.mieCoefficient, 'value', 0, 0.1).name('mieCoefficient');
-	gui.add(sky.material.uniforms.mieDirectionalG, 'value', 0, 1).name('mieDirectionalG');
+	gui.add(sky.material.uniforms.turbidity, 'value', 0, 20).name('turbidity').onChange(()=>{
+		cubeCamera.update(Env.renderer, skyScene);
+	});
+	gui.add(sky.material.uniforms.rayleigh, 'value', 0, 4).name('rayleigh').onChange(()=>{
+		cubeCamera.update(Env.renderer, skyScene);
+	});
+	gui.add(sky.material.uniforms.mieCoefficient, 'value', 0, 0.1).name('mieCoefficient').onChange(()=>{
+		cubeCamera.update(Env.renderer, skyScene);
+	});
+	gui.add(sky.material.uniforms.mieDirectionalG, 'value', 0, 1).name('mieDirectionalG').onChange(()=>{
+		cubeCamera.update(Env.renderer, skyScene);
+	});
 
 	gui.add(light, 'intensity', 0, 1).name('intensity');
 
@@ -326,13 +322,9 @@ function init() {
 	const animate = (msTime) => {
 		if (previousTime === 0) {
 			previousTime = msTime;
-			return;
 		}
 		const deltaTime = msTime - previousTime;
 		previousTime = msTime;
-
-		Env.updatePixelRatio();
-		if (controls) controls.update(deltaTime);
 
 		if (sunAngle.phi !== sunAnglePrev.phi || sunAngle.theta !== sunAnglePrev.theta) {
 			sunPosition.setFromSphericalCoords(1, sunAngle.phi * Util.degToRad, sunAngle.theta * Util.degToRad);
@@ -342,6 +334,8 @@ function init() {
 
 			sunAnglePrev.phi = sunAngle.phi;
 			sunAnglePrev.theta = sunAngle.theta;
+
+			cubeCamera.update(Env.renderer, skyScene);
 		}
 
 		if (ENABLE_AMMO) {
@@ -349,10 +343,7 @@ function init() {
 			updateCollision();
 		}
 
-		Env.renderer.render(scene, Env.camera);
-
-		stats.update();
-
+		Env.render(deltaTime);
 	}
 	Env.renderer.setAnimationLoop(animate);
 
@@ -371,7 +362,7 @@ function init() {
 		sphere.position.copy(position);
 		// sphere.castShadow = true;
 		sphere.receiveShadow = true;
-		scene.add(sphere);
+		Env.scene.add(sphere);
 
 		if (floorArea.length > 0) {
 			const previous = floorArea[floorArea.length - 1];
@@ -386,7 +377,7 @@ function init() {
 
 			Framing.placeLink(cylinder, previous, sphere);
 
-			scene.add(cylinder);
+			Env.scene.add(cylinder);
 			floorArea.push(cylinder);
 		}
 		floorArea.push(sphere);
@@ -405,12 +396,12 @@ function init() {
 
 	const collisionDetect = (event) => {
 		const pointer = new THREE.Vector2();
-		const raycaster = new THREE.Raycaster(Env.camera.position, down);
-
 		pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
 		pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+		const raycaster = new THREE.Raycaster();
 		raycaster.setFromCamera(pointer, Env.camera);
-		const intersects = raycaster.intersectObjects(scene.children);
+		const intersects = raycaster.intersectObjects(Env.scene.children);
 		const framingHits = [];
 		for (const hit of intersects) {
 			if (hit.object.userData.framing) framingHits.push(hit);
@@ -443,7 +434,7 @@ function init() {
 				}
 				if (triggered) {
 					selectedFrameNode = hit.object.userData.framing.rep;
-					controls.enabled = false;
+					Env.controls.enabled = false;
 				}
 			}
 		}
@@ -470,7 +461,7 @@ function init() {
 				addPoint(hit.point);
 			}
 		}
-		controls.enabled = true;
+		Env.controls.enabled = true;
 		selectedFrameNode = null;
 		mouseDown = false;
 		dragging = false;

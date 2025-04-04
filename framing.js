@@ -1,3 +1,5 @@
+import { Vector3 } from 'three';
+
 class FrameArray extends Array {
     constructor(...args) {
         super(...args);
@@ -41,6 +43,8 @@ class FrameArray extends Array {
     }
 }
 
+const up = new Vector3(0, 1, 0);
+Object.freeze(up);
 const placeLink = (link, node1, node2) => {
     const ray = node1.position.clone();
     ray.sub(node2.position);

@@ -1,10 +1,17 @@
 import {
     Vector3,
-    WebGLRenderer, PerspectiveCamera,
+    Scene, WebGLRenderer, PerspectiveCamera,
     NoToneMapping, LinearToneMapping, ReinhardToneMapping, CineonToneMapping, ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping,
 } from 'three';
 
-const camera = new PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 1000);
+import Stats from 'three/addons/libs/stats.module.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const stats = new Stats();
+
+const camera = new PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.3, 1000);
+
+const scene = new Scene();
 
 const renderer = new WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -19,7 +26,10 @@ renderer.domElement.style.left = '0px';
 renderer.domElement.style.width = '100%';
 renderer.domElement.style.height = '100%';
 
+const controls = new OrbitControls(camera, renderer.domElement);
+
 document.body.appendChild(renderer.domElement);
+document.body.appendChild(stats.dom);
 
 const windowResize = () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -29,8 +39,16 @@ const windowResize = () => {
 }
 window.addEventListener('resize', windowResize);
 
-const updatePixelRatio = () => {
-    if (renderer.getPixelRatio() !== window.devicePixelRatio) console.log(window.devicePixelRatio);
+const render = (deltaTime) => {
     if (renderer.getPixelRatio() !== window.devicePixelRatio) renderer.setPixelRatio(window.devicePixelRatio);
+
+    controls.update(deltaTime);
+
+    renderer.render(scene, camera);
+
+    stats.update();
 }
-export { camera, renderer, updatePixelRatio };
+
+export {
+    camera, scene, renderer, controls, render
+};
