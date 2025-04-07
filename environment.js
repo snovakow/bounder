@@ -1,11 +1,13 @@
 import {
     Vector3,
-    Scene, WebGLRenderer, PerspectiveCamera,
+    Scene, WebGLRenderer, PerspectiveCamera, DirectionalLight, WebGLCubeRenderTarget, HalfFloatType, CubeCamera,
     NoToneMapping, LinearToneMapping, ReinhardToneMapping, CineonToneMapping, ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping,
 } from 'three';
+import * as Util from './util.js';
 
 import Stats from 'three/addons/libs/stats.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Sky } from 'three/addons/objects/Sky.js';
 
 const stats = new Stats();
 
@@ -28,6 +30,47 @@ renderer.domElement.style.height = '100%';
 
 const controls = new OrbitControls(camera, renderer.domElement);
 
+const sunAngle = {
+    phi: 45,
+    theta: 90,
+};
+const sunAnglePrev = { ...sunAngle };
+const sky = new Sky();
+sky.scale.setScalar(100);
+const sunPosition = new Vector3().setFromSphericalCoords(1, sunAngle.phi * Util.degToRad, sunAngle.theta * Util.degToRad);
+sky.material.uniforms.sunPosition.value = sunPosition;
+const skyScene = new Scene();
+skyScene.add(sky);
+
+const light = new DirectionalLight(0xffffff, 1);
+light.castShadow = true;
+const dLight = 1000;
+const sLight = dLight * 0.25;
+light.shadow.camera.left = - sLight;
+light.shadow.camera.right = sLight;
+light.shadow.camera.top = sLight;
+light.shadow.camera.bottom = - sLight;
+
+// light.shadow.camera.near = dLight / 30;
+// light.shadow.camera.far = dLight;
+light.shadow.camera.near = 0.3;
+light.shadow.camera.far = 1000;
+
+light.shadow.bias = -0.0001;
+light.shadow.mapSize.x = 4096;
+light.shadow.mapSize.y = 4096;
+
+light.position.copy(sunPosition);
+light.position.setLength(10);
+scene.add(light);
+
+const cubeRenderTarget = new WebGLCubeRenderTarget(2048);
+cubeRenderTarget.texture.type = HalfFloatType;
+
+const cubeCamera = new CubeCamera(camera.near, camera.far, cubeRenderTarget);
+cubeCamera.update(renderer, skyScene);
+scene.background = cubeRenderTarget.texture;
+
 document.body.appendChild(renderer.domElement);
 document.body.appendChild(stats.dom);
 
@@ -44,11 +87,24 @@ const render = (deltaTime) => {
 
     controls.update(deltaTime);
 
+    if (sunAngle.phi !== sunAnglePrev.phi || sunAngle.theta !== sunAnglePrev.theta) {
+        sunPosition.setFromSphericalCoords(1, sunAngle.phi * Util.degToRad, sunAngle.theta * Util.degToRad);
+        light.position.copy(sunPosition);
+        light.position.setLength(10);
+        // sky.material.uniforms.sunPosition.value.copy(sunPosition);
+
+        sunAnglePrev.phi = sunAngle.phi;
+        sunAnglePrev.theta = sunAngle.theta;
+
+        cubeCamera.update(renderer, skyScene);
+    }
+
     renderer.render(scene, camera);
 
     stats.update();
 }
 
 export {
-    camera, scene, renderer, controls, render
+    sunAngle, sky, skyScene, light, cubeRenderTarget, cubeCamera,
+    camera, scene, renderer, controls, render,
 };

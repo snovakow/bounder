@@ -1,58 +1,16 @@
 import * as THREE from 'three';
 import { Vector3 } from 'three';
 
-import { Sky } from 'three/addons/objects/Sky.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-import * as Util from './util.js';
 import * as Framing from './framing.js';
 import * as Env from './environment.js';
 
 const BALL_COUNT = 100;
-const ENABLE_AMMO = false;
+const ENABLE_AMMO = true;
 
 function init() {
-	const sunAngle = {
-		phi: 45,
-		theta: 90,
-	};
-	const sunAnglePrev = { ...sunAngle };
-	const sky = new Sky();
-	sky.scale.setScalar(100);
-
-	const sunPosition = new Vector3().setFromSphericalCoords(1, sunAngle.phi * Util.degToRad, sunAngle.theta * Util.degToRad);
-	sky.material.uniforms.sunPosition.value = sunPosition;
-
-	const skyScene = new THREE.Scene();
-	skyScene.add(sky);
-
-	// const hemisphereLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
-	// scene.add( hemisphereLight );
-
-	const light = new THREE.DirectionalLight(0xffffff, 1);
-	light.castShadow = true;
-	const dLight = 1000;
-	const sLight = dLight * 0.25;
-	light.shadow.camera.left = - sLight;
-	light.shadow.camera.right = sLight;
-	light.shadow.camera.top = sLight;
-	light.shadow.camera.bottom = - sLight;
-
-	// light.shadow.camera.near = dLight / 30;
-	// light.shadow.camera.far = dLight;
-	light.shadow.camera.near = 0.3;
-	light.shadow.camera.far = 1000;
-
-	light.shadow.bias = -0.0001;
-	light.shadow.mapSize.x = 4096;
-	light.shadow.mapSize.y = 4096;
-
-	light.position.copy(sunPosition);
-	light.position.setLength(10);
-
-	Env.scene.add(light);
-
 	const material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
 	let room = null;
 
@@ -67,7 +25,7 @@ function init() {
 		const broadphase = new Ammo.btDbvtBroadphase();
 		const solver = new Ammo.btSequentialImpulseConstraintSolver();
 		physicsWorld = new Ammo.btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-		physicsWorld.setGravity(new Ammo.btVector3(0, -6, 0));
+		physicsWorld.setGravity(new Ammo.btVector3(0, -0.4, 0)); // -6
 
 		// Create the terrain body
 		const terrainMinHeight = 0;
@@ -80,11 +38,10 @@ function init() {
 		const groundMass = 0;
 		const groundLocalInertia = new Ammo.btVector3(0, 0, 0);
 		const groundMotionState = new Ammo.btDefaultMotionState(groundTransform);
-		const groundBody = new Ammo.btRigidBody(new Ammo.btRigidBodyConstructionInfo(groundMass, groundMotionState, groundShape, groundLocalInertia));
-		physicsWorld.addRigidBody(groundBody);
+		// const groundBody = new Ammo.btRigidBody(new Ammo.btRigidBodyConstructionInfo(groundMass, groundMotionState, groundShape, groundLocalInertia));
+		// physicsWorld.addRigidBody(groundBody);
 
 		transformAux1 = new Ammo.btTransform();
-
 	}
 
 	const positions = [];
@@ -128,15 +85,9 @@ function init() {
 		return body;
 	}
 
-	const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(2048);
-	cubeRenderTarget.texture.type = THREE.HalfFloatType;
-
-	const cubeCamera = new THREE.CubeCamera(Env.camera.near, Env.camera.far, cubeRenderTarget);
-	cubeCamera.update(Env.renderer, skyScene);
-	Env.scene.background = cubeRenderTarget.texture;
 	// scene.environment = cubeRenderTarget.texture;
 
-	material.envMap = cubeRenderTarget.texture;
+	material.envMap = Env.cubeRenderTarget.texture;
 
 	const down = new Vector3(0, -1, 0);
 	Object.freeze(down);
@@ -155,7 +106,7 @@ function init() {
 				if (node.material) {
 					if (node.material.map) node.material.map.anisotropy = Env.renderer.capabilities.getMaxAnisotropy();
 					node.material.envMapIntensity = 0.3;
-					node.material.envMap = cubeRenderTarget.texture;
+					node.material.envMap = Env.cubeRenderTarget.texture;
 				}
 
 				if (node.isMesh) {
@@ -164,7 +115,7 @@ function init() {
 				}
 			});
 
-			Env.scene.add(room);
+			// Env.scene.add(room);
 
 			if (ENABLE_AMMO) {
 				initPhysics(room);
@@ -172,6 +123,64 @@ function init() {
 					const position = positions[i];
 					physicsBodies[i] = generateObject(position);
 				}
+
+				/*
+				const groundMass = 0;
+				const groundLocalInertia = new Ammo.btVector3( 0, 0, 0 );
+				const groundMotionState = new Ammo.btDefaultMotionState( groundTransform );
+				const groundBody = new Ammo.btRigidBody( new Ammo.btRigidBodyConstructionInfo( groundMass, groundMotionState, groundShape, groundLocalInertia ) );
+				physicsWorld.addRigidBody( groundBody );
+				*/
+
+				const trimesh = new Ammo.btTriangleMesh();
+
+				room.traverse((node) => {
+					if (!node.isMesh) return;
+
+					const points = node.geometry.attributes.position.array;
+					const index = geometry.index.array;
+					const v0 = new Vector3();
+					const v1 = new Vector3();
+					const v2 = new Vector3();
+					let min = 50;
+					let max = -50;
+					for (let i = 0, len = index.length; i < len; i += 3) {
+						const i0 = index[i] * 3;
+						const i1 = index[i + 1] * 3;
+						const i2 = index[i + 2] * 3;
+						v0.set(points[i0], points[i0 + 1], points[i0 + 2]);
+						v1.set(points[i1], points[i1 + 1], points[i1 + 2]);
+						v2.set(points[i2], points[i2 + 1], points[i2 + 2]);
+
+						const p0 = new Ammo.btVector3(v0.x, v0.y, v0.z);
+						const p1 = new Ammo.btVector3(v1.x, v1.y, v1.z);
+						const p2 = new Ammo.btVector3(v2.x, v2.y, v2.z);
+						trimesh.addTriangle(p0, p1, p2);
+						min = Math.min(min, p0.y());
+						min = Math.min(min, p1.y());
+						min = Math.min(min, p2.y());
+						max = Math.max(max, p0.y());
+						max = Math.max(max, p1.y());
+						max = Math.max(max, p2.y());
+					}
+					console.log(min, max);
+				});
+
+				const useQuantizedBvhTree = false;
+				const trimeshShape = new Ammo.btBvhTriangleMeshShape(trimesh, useQuantizedBvhTree);
+				const transform = new Ammo.btTransform();
+				transform.setIdentity();
+				const position = new Vector3(0, -10, 0);
+				transform.setOrigin(new Ammo.btVector3(position.x, position.y, position.z));
+				const motionState = new Ammo.btDefaultMotionState(transform);
+				const mass = 0;
+				const localInertia = new Ammo.btVector3(0, 0, 0);
+				console.log(localInertia);
+				const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, trimeshShape, localInertia);
+				const roomBody = new Ammo.btRigidBody(rbInfo);
+				// console.log(roomBody);
+
+				physicsWorld.addRigidBody(roomBody);
 			}
 
 			Env.camera.position.x = 0;
@@ -205,11 +214,11 @@ function init() {
 
 	const sqRoot = Math.pow(BALL_COUNT, 0.5);
 	for (let i = 0; i < BALL_COUNT; i++) {
-		const x = i % sqRoot;
-		const y = 5 + Math.random() * 10;
-		const z = Math.floor(i / sqRoot);
+		const x = i % sqRoot - sqRoot*0.5;
+		const y = 17 + Math.random() * 10;
+		const z = Math.floor(i / sqRoot) - sqRoot*0.5;
 
-		const position = new Vector3(x * 1, y, z * 1);
+		const position = new Vector3(x * 2, y, z * 2);
 
 		positions[i] = position;
 
@@ -261,8 +270,8 @@ function init() {
 
 	const gui = new GUI();
 
-	gui.add(light.shadow, 'radius', 0, 2).name('shadow radius');
-	gui.add(light.shadow, 'normalBias', 0, 0.1).name('shadow normalBias');
+	gui.add(Env.light.shadow, 'radius', 0, 2).name('shadow radius');
+	gui.add(Env.light.shadow, 'normalBias', 0, 0.1).name('shadow normalBias');
 
 	// gui.add(light.shadow.camera, 'left', -1000, 0).name('left');
 	// gui.add(light.shadow.camera, 'right', 0, 1000).name('right');
@@ -276,25 +285,25 @@ function init() {
 	// gui.add(light.position, 'x', -1000, 1000).name('Light X');
 	// gui.add(light.position, 'y', -1000, 1000).name('Light Y');
 	// gui.add(light.position, 'z', -1000, 1000).name('Light Z');
-	gui.add(sunAngle, 'phi', -90, 90).name('Sun phi');
-	gui.add(sunAngle, 'theta', -180, 180).name('Sun theta');
+	gui.add(Env.sunAngle, 'phi', -90, 90).name('Sun phi');
+	gui.add(Env.sunAngle, 'theta', -180, 180).name('Sun theta');
 
-	gui.add(sky.material.uniforms.turbidity, 'value', 0, 20).name('turbidity').onChange(() => {
-		cubeCamera.update(Env.renderer, skyScene);
+	gui.add(Env.sky.material.uniforms.turbidity, 'value', 0, 20).name('turbidity').onChange(() => {
+		Env.cubeCamera.update(Env.renderer, skyScene);
 	});
-	gui.add(sky.material.uniforms.rayleigh, 'value', 0, 4).name('rayleigh').onChange(() => {
-		cubeCamera.update(Env.renderer, skyScene);
+	gui.add(Env.sky.material.uniforms.rayleigh, 'value', 0, 4).name('rayleigh').onChange(() => {
+		Env.cubeCamera.update(Env.renderer, skyScene);
 	});
-	gui.add(sky.material.uniforms.mieCoefficient, 'value', 0, 0.1).name('mieCoefficient').onChange(() => {
-		cubeCamera.update(Env.renderer, skyScene);
+	gui.add(Env.sky.material.uniforms.mieCoefficient, 'value', 0, 0.1).name('mieCoefficient').onChange(() => {
+		Env.cubeCamera.update(Env.renderer, skyScene);
 	});
-	gui.add(sky.material.uniforms.mieDirectionalG, 'value', 0, 1).name('mieDirectionalG').onChange(() => {
-		cubeCamera.update(Env.renderer, skyScene);
+	gui.add(Env.sky.material.uniforms.mieDirectionalG, 'value', 0, 1).name('mieDirectionalG').onChange(() => {
+		Env.cubeCamera.update(Env.renderer, skyScene);
 	});
 
-	gui.add(light, 'intensity', 0, 1).name('intensity');
+	gui.add(Env.light, 'intensity', 0, 1).name('intensity');
 
-	gui.add(light.shadow, 'bias', -0.001, 0).name('bias');
+	gui.add(Env.light.shadow, 'bias', -0.001, 0).name('bias');
 	gui.add(Env.renderer, 'toneMappingExposure', 0, 1).name('toneMappingExposure');
 
 	// const shadowMapTypes = {
@@ -325,18 +334,6 @@ function init() {
 		}
 		const deltaTime = msTime - previousTime;
 		previousTime = msTime;
-
-		if (sunAngle.phi !== sunAnglePrev.phi || sunAngle.theta !== sunAnglePrev.theta) {
-			sunPosition.setFromSphericalCoords(1, sunAngle.phi * Util.degToRad, sunAngle.theta * Util.degToRad);
-			light.position.copy(sunPosition);
-			light.position.setLength(10);
-			// sky.material.uniforms.sunPosition.value.copy(sunPosition);
-
-			sunAnglePrev.phi = sunAngle.phi;
-			sunAnglePrev.theta = sunAngle.theta;
-
-			cubeCamera.update(Env.renderer, skyScene);
-		}
 
 		if (ENABLE_AMMO) {
 			updatePhysics(deltaTime);
