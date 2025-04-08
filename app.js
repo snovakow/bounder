@@ -19,28 +19,12 @@ function init() {
 	let transformAux1;
 	let physicsWorld;
 	function initPhysics() {
-
-		// Physics configuration
-
 		const collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
 		const dispatcher = new Ammo.btCollisionDispatcher(collisionConfiguration);
 		const broadphase = new Ammo.btDbvtBroadphase();
 		const solver = new Ammo.btSequentialImpulseConstraintSolver();
 		physicsWorld = new Ammo.btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
 		physicsWorld.setGravity(new Ammo.btVector3(0, -6, 0)); // -6
-
-		// Create the terrain body
-		const terrainMinHeight = 0;
-		const terrainMaxHeight = 10;
-
-		// const groundTransform = new Ammo.btTransform();
-		// groundTransform.setIdentity();
-		// Shifts the terrain, since bullet re-centers it on its bounding box.
-		// groundTransform.setOrigin(new Ammo.btVector3(0, 0, 0));
-		// const groundMass = 0;
-		// const groundLocalInertia = new Ammo.btVector3(0, 0, 0);
-		// const groundMotionState = new Ammo.btDefaultMotionState(groundTransform);
-		// const groundBody = new Ammo.btRigidBody(new Ammo.btRigidBodyConstructionInfo(groundMass, groundMotionState, groundShape, groundLocalInertia));
 
 		transformAux1 = new Ammo.btTransform();
 	}
@@ -49,20 +33,11 @@ function init() {
 	const positions = [];
 	const physicsBodies = [];
 	function generateObject(position) {
-		// let threeObject = null;
 		let shape = null;
 
 		const margin = 0.0;
-
-		// let radius, height;
-
-		// 		// Sphere
-		// 		radius = 1 + Math.random() * objectSize;
-		// 		threeObject = new THREE.Mesh( new THREE.SphereGeometry( radius, 20, 20 ), createObjectMaterial() );
 		shape = new Ammo.btSphereShape(sphereRadius);
 		shape.setMargin(margin);
-
-		// threeObject.position.set( ( Math.random() - 0.5 ) * terrainWidth * 0.6, terrainMaxHeight + objectSize + 2, ( Math.random() - 0.5 ) * terrainDepth * 0.6 );
 
 		const mass = sphereRadius * sphereRadius;
 		const localInertia = new Ammo.btVector3(0, 0, 0);
@@ -74,19 +49,10 @@ function init() {
 		const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
 		const body = new Ammo.btRigidBody(rbInfo);
 		physicsBodies.push(body);
-		// threeObject.userData.physicsBody = body;
-
-		// threeObject.receiveShadow = true;
-		// threeObject.castShadow = true;
-
-		// scene.add(threeObject);
-		// dynamicObjects.push(threeObject);
 
 		physicsWorld.addRigidBody(body);
 		return body;
 	}
-
-	// scene.environment = cubeRenderTarget.texture;
 
 	material.envMap = Env.cubeRenderTarget.texture;
 
@@ -111,25 +77,11 @@ function init() {
 		const buildBvh = true; // default = true
 		const transform = new Ammo.btTransform();
 		transform.setIdentity();
-		// const position0 = new Vector3(0, 0, 0);
-		// transform.setOrigin(new Ammo.btVector3(position0.x, position0.y, position0.z));
-		// transform.setRotaion(new Ammo.btQuaternion(0,0,0,1));
+
 		const motionState = new Ammo.btDefaultMotionState(transform);
 		const mass = 0;
 		const localInertia = new Ammo.btVector3(0, 0, 0);
 		const trimesh = new Ammo.btTriangleMesh();
-
-		// const position = new Vector3(7.67926025390625, -5.592729568481445, 26.37653923034668);
-
-		// node.position.setScalar(0);
-		// node.scale.setScalar(1);
-
-		// const position = node.position;
-		// const scale = node.scale;
-		// const quaternion = node.quaternion;
-		// console.log(node)
-		// node.updateMatrix();
-		// node.geometry.applyMatrix4(node.matrixWorld);
 
 		const points = mesh.geometry.attributes.position.array;
 		const index = geometry.index.array;
@@ -143,16 +95,6 @@ function init() {
 			v0.set(points[i0], points[i0 + 1], points[i0 + 2]);
 			v1.set(points[i1], points[i1 + 1], points[i1 + 2]);
 			v2.set(points[i2], points[i2 + 1], points[i2 + 2]);
-
-			// v0.applyMatrix4(node.matrixWorld);
-			// v1.applyMatrix4(node.matrixWorld);
-			// v2.applyMatrix4(node.matrixWorld);
-			// v0.add(position);
-			// v1.add(position);
-			// v2.add(position);
-			// v0.multiply(scale);
-			// v1.multiply(scale);
-			// v2.multiply(scale);
 
 			const p0 = new Ammo.btVector3(v0.x, v0.y, v0.z);
 			const p1 = new Ammo.btVector3(v1.x, v1.y, v1.z);
@@ -172,38 +114,34 @@ function init() {
 		.setPath('include/models/gltf/')
 		.load('collision-world.glb', function (gltf) {
 			room = gltf.scene.children[0];
-			// room.position.y = -10;
-			// room.scale.setScalar(1);
-			const node = room;
-			node.userData.framing = {
+			room.userData.framing = {
 				base: true
 			}
-			if (node.material) {
-				if (node.material.map) node.material.map.anisotropy = Env.renderer.capabilities.getMaxAnisotropy();
-				node.material.envMapIntensity = 0.3;
-				node.material.envMap = Env.cubeRenderTarget.texture;
+			if (room.material) {
+				if (room.material.map) room.material.map.anisotropy = Env.renderer.capabilities.getMaxAnisotropy();
+				room.material.envMapIntensity = 0.3;
+				room.material.envMap = Env.cubeRenderTarget.texture;
 			}
 
-			if (node.isMesh) {
-				node.castShadow = true;
-				node.receiveShadow = true;
+			if (room.isMesh) {
+				room.castShadow = true;
+				room.receiveShadow = true;
 			}
 
-			node.updateMatrixWorld();
-			node.geometry.applyMatrix4(node.matrixWorld);
+			room.updateMatrixWorld();
+			room.geometry.applyMatrix4(room.matrixWorld);
 
-			node.position.set(0, 0, 0);
-			node.rotation.set(0, 0, 0);
-			node.scale.set(1, 1, 1);
-			node.updateMatrix();
-			node.geometry.computeBoundingBox();
-			node.geometry.computeBoundingSphere();
+			room.position.set(0, 0, 0);
+			room.rotation.set(0, 0, 0);
+			room.scale.set(1, 1, 1);
+			room.updateMatrixWorld();
+			room.geometry.computeBoundingBox();
+			room.geometry.computeBoundingSphere();
 
 			Env.scene.add(room);
 
 			if (ENABLE_AMMO) {
 				initPhysics();
-				// physicsWorld.addRigidBody(groundBody);
 				for (let i = 0; i < BALL_COUNT; i++) {
 					const position = positions[i];
 					physicsBodies[i] = generateObject(position);
@@ -211,16 +149,7 @@ function init() {
 
 				meshAdd(room);
 
-				/*
-				const groundMass = 0;
-				const groundLocalInertia = new Ammo.btVector3( 0, 0, 0 );
-				const groundMotionState = new Ammo.btDefaultMotionState( groundTransform );
-				const groundBody = new Ammo.btRigidBody( new Ammo.btRigidBodyConstructionInfo( groundMass, groundMotionState, groundShape, groundLocalInertia ) );
-				physicsWorld.addRigidBody( groundBody );
-				*/
-
 				const triScale = 5;
-				// const roomBody = meshAdd(room);
 				const geometry = new THREE.PlaneGeometry(10, 10, 10, 10);
 				const material = new THREE.MeshBasicMaterial({ color: 0x7f7f00, side: THREE.FrontSide });
 				const plane = new THREE.Mesh(geometry, material);
@@ -228,9 +157,6 @@ function init() {
 				plane.scale.multiplyScalar(triScale);
 				plane.position.y = 0;
 				plane.rotation.x = -90 * Util.degToRad;
-
-				// Env.scene.add(plane);
-				// meshAdd(plane);
 			}
 
 			Env.camera.position.x = 0;
@@ -253,7 +179,7 @@ function init() {
 	mesh.castShadow = true;
 	mesh.receiveShadow = true;
 
-	mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); // will be updated every frame
+	mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 	Env.scene.add(mesh);
 
 	const dummy = new THREE.Object3D();
@@ -294,7 +220,6 @@ function init() {
 
 		physicsWorld.stepSimulation(deltaTime, 10);
 
-		// Update objects
 		for (let i = 0, il = positions.length; i < il; i++) {
 
 			const position = positions[i];
@@ -306,9 +231,6 @@ function init() {
 				const p = transformAux1.getOrigin();
 				const q = transformAux1.getRotation();
 				position.set(p.x(), p.y(), p.z());
-
-				// objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
-
 			}
 
 		}
@@ -392,15 +314,14 @@ function init() {
 	Env.renderer.setAnimationLoop(animate);
 
 	const floorArea = new Framing.FrameArray();
-	const addPoint = (position) => {
+	const addPoint = (position, link = null) => {
 		const radius = 0.1;
-		const lineRadius = radius * 0.25;
+		const lineRadius = radius * 0.5;
 		const geometry = new THREE.SphereGeometry(radius, 18, 9);
 
 		const sphere = new THREE.Mesh(geometry, material);
 		sphere.userData.framing = {
 			node: true,
-			rep: sphere,
 		}
 
 		sphere.position.copy(position);
@@ -408,8 +329,11 @@ function init() {
 		sphere.receiveShadow = true;
 		Env.scene.add(sphere);
 
-		if (floorArea.length > 0) {
-			const previous = floorArea[floorArea.length - 1];
+		if (link) {
+			floorArea.focusNode(link);
+			const next = floorArea.nextNode();
+			const previous = floorArea.prevNode();
+			Framing.placeLink(link, previous, sphere);
 
 			const cylinderGeometry = new THREE.CylinderGeometry(lineRadius, lineRadius, 1, 9, 1, true);
 			const cylinder = new THREE.Mesh(cylinderGeometry, material);
@@ -418,13 +342,30 @@ function init() {
 				node: false,
 			};
 			cylinder.receiveShadow = true;
-
-			Framing.placeLink(cylinder, previous, sphere);
-
 			Env.scene.add(cylinder);
-			floorArea.push(cylinder);
+
+			floorArea.splice(floorArea.focusIndex + 1, 0, sphere);
+			floorArea.splice(floorArea.focusIndex + 2, 0, cylinder);
+			Framing.placeLink(cylinder, sphere, next);
+		} else {
+			if (floorArea.length > 0) {
+				const previous = floorArea[floorArea.length - 1];
+
+				const cylinderGeometry = new THREE.CylinderGeometry(lineRadius, lineRadius, 1, 9, 1, true);
+				const cylinder = new THREE.Mesh(cylinderGeometry, material);
+				cylinder.userData.framing = {
+					link: true,
+					node: false,
+				};
+				cylinder.receiveShadow = true;
+				Framing.placeLink(cylinder, previous, sphere);
+
+				Env.scene.add(cylinder);
+				floorArea.push(cylinder);
+			}
+			floorArea.push(sphere);
 		}
-		floorArea.push(sphere);
+		return sphere;
 	}
 
 	const moveFramingNode = (framingNode, position) => {
@@ -457,6 +398,9 @@ function init() {
 	let mouseDown = false;
 	let selectedFrameNode = null;
 	const mousedownEvent = (event) => {
+		if (Util.isRightMouse(event)) return;
+		if (!event.shiftKey) return;
+
 		mouseDown = true;
 		dragging = false;
 
@@ -466,18 +410,19 @@ function init() {
 			if (hit.object.userData.framing) {
 				let triggered = false;
 				if (hit.object.userData.framing.node) {
+					selectedFrameNode = hit.object;
 					triggered = true;
 				}
 				if (hit.object.userData.framing.link) {
-					const intersects = collisionDetect(event);
-					const hit = intersects[0];
-					if (hit) {
-						addPoint(hit.point, hit.object.userData.framing.rep);
-						triggered = true;
-					}
+					selectedFrameNode = addPoint(hit.point, hit.object);
+					triggered = true;
 				}
+				if (hit.object.userData.framing.base) {
+					selectedFrameNode = addPoint(hit.point);
+					triggered = true;
+				}
+
 				if (triggered) {
-					selectedFrameNode = hit.object.userData.framing.rep;
 					Env.controls.enabled = false;
 				}
 			}
@@ -498,13 +443,6 @@ function init() {
 		}
 	}
 	const mouseupEvent = (event) => {
-		if (!dragging) {
-			const intersects = collisionDetect(event);
-			const hit = intersects[0];
-			if (hit) {
-				addPoint(hit.point);
-			}
-		}
 		Env.controls.enabled = true;
 		selectedFrameNode = null;
 		mouseDown = false;
@@ -541,11 +479,7 @@ function init() {
 		const intersects = raycaster.intersectObject(room);
 		const hit = intersects[0];
 		if (hit) {
-			Env.camera.position.y = 1.6 + hit.point.y + 10;
-			// camera.rotation.x=1;
-			// camera.rotation.y=1;
-			// camera.rotation.z=1;
-			// controls.update();
+			Env.camera.position.y = 1.6 + hit.point.y;
 		}
 
 		const direction = new Vector3();
@@ -561,13 +495,12 @@ function init() {
 if (ENABLE_AMMO) {
 	const script = document.createElement('script');
 	script.onload = function () {
-		Ammo().then(function (AmmoLib) {
-			// Ammo = AmmoLib;
+		Ammo().then(function () {
 			init();
 		});
 	};
 	script.src = './include/ammo.wasm.js';
-	document.head.appendChild(script); //or something of the likes
+	document.head.appendChild(script);
 } else {
 	init();
 }
