@@ -13,7 +13,6 @@ const BALL_COUNT = 1000;
 const ENABLE_AMMO = false;
 
 function init() {
-	const material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
 	let room = null;
 
 	let transformAux1;
@@ -53,8 +52,6 @@ function init() {
 		physicsWorld.addRigidBody(body);
 		return body;
 	}
-
-	material.envMap = Env.cubeRenderTarget.texture;
 
 	const down = new Vector3(0, -1, 0);
 	Object.freeze(down);
@@ -175,7 +172,7 @@ function init() {
 
 	const geometry = new THREE.SphereGeometry(sphereRadius, 24, 12);
 
-	const mesh = new THREE.InstancedMesh(geometry, material, BALL_COUNT);
+	const mesh = new THREE.InstancedMesh(geometry, Env.material, BALL_COUNT);
 	mesh.castShadow = true;
 	mesh.receiveShadow = true;
 
@@ -239,8 +236,8 @@ function init() {
 
 	const gui = new GUI();
 
-	gui.add(Env.light.shadow, 'radius', 0, 2).name('shadow radius');
-	gui.add(Env.light.shadow, 'normalBias', 0, 0.1).name('shadow normalBias');
+	gui.add(Env.light.shadow, 'radius', 0, 10).name('shadow radius');
+	gui.add(Env.light.shadow, 'normalBias', 0, 0.2).name('shadow normalBias');
 
 	// gui.add(light.shadow.camera, 'left', -1000, 0).name('left');
 	// gui.add(light.shadow.camera, 'right', 0, 1000).name('right');
@@ -258,16 +255,16 @@ function init() {
 	gui.add(Env.sunAngle, 'theta', -180, 180).name('Sun theta');
 
 	gui.add(Env.sky.material.uniforms.turbidity, 'value', 0, 20).name('turbidity').onChange(() => {
-		Env.cubeCamera.update(Env.renderer, skyScene);
+		Env.cubeCamera.update(Env.renderer, Env.skyScene);
 	});
 	gui.add(Env.sky.material.uniforms.rayleigh, 'value', 0, 4).name('rayleigh').onChange(() => {
-		Env.cubeCamera.update(Env.renderer, skyScene);
+		Env.cubeCamera.update(Env.renderer, Env.skyScene);
 	});
 	gui.add(Env.sky.material.uniforms.mieCoefficient, 'value', 0, 0.1).name('mieCoefficient').onChange(() => {
-		Env.cubeCamera.update(Env.renderer, skyScene);
+		Env.cubeCamera.update(Env.renderer, Env.skyScene);
 	});
 	gui.add(Env.sky.material.uniforms.mieDirectionalG, 'value', 0, 1).name('mieDirectionalG').onChange(() => {
-		Env.cubeCamera.update(Env.renderer, skyScene);
+		Env.cubeCamera.update(Env.renderer, Env.skyScene);
 	});
 
 	gui.add(Env.light, 'intensity', 0, 1).name('intensity');
@@ -275,15 +272,16 @@ function init() {
 	gui.add(Env.light.shadow, 'bias', -0.001, 0).name('bias');
 	gui.add(Env.renderer, 'toneMappingExposure', 0, 1).name('toneMappingExposure');
 
-	// const shadowMapTypes = {
-	// 	BasicShadowMap: THREE.BasicShadowMap,
-	// 	PCFShadowMap: THREE.PCFShadowMap,
-	// 	PCFSoftShadowMap: THREE.PCFSoftShadowMap,
-	// 	VSMShadowMap: THREE.VSMShadowMap,
-	// };
-	// gui.add(renderer.shadowMap, 'type', shadowMapTypes).name('shadowMap').onChange = ()=>{
-	// 	renderer.shadowMap.needsUpdate = true;
-	// };
+	const shadowMapTypes = {
+		BasicShadowMap: THREE.BasicShadowMap,
+		PCFShadowMap: THREE.PCFShadowMap,
+		PCFSoftShadowMap: THREE.PCFSoftShadowMap,
+		VSMShadowMap: THREE.VSMShadowMap,
+	};
+	gui.add(Env.renderer.shadowMap, 'type', shadowMapTypes).name('shadowMap').onChange = () => {
+		Env.renderer.shadowMap.needsUpdate = true;
+	};
+	gui.add(Env.light.shadow, 'blurSamples', 1, 30).step(1).name('blurSamples');
 
 	const toneMappingFormats = {
 		NoToneMapping: THREE.NoToneMapping,
@@ -319,7 +317,7 @@ function init() {
 		const lineRadius = radius * 0.5;
 		const geometry = new THREE.SphereGeometry(radius, 18, 9);
 
-		const sphere = new THREE.Mesh(geometry, material);
+		const sphere = new THREE.Mesh(geometry, Env.material);
 		sphere.userData.framing = {
 			node: true,
 		}
@@ -336,7 +334,7 @@ function init() {
 			Framing.placeLink(link, previous, sphere);
 
 			const cylinderGeometry = new THREE.CylinderGeometry(lineRadius, lineRadius, 1, 9, 1, true);
-			const cylinder = new THREE.Mesh(cylinderGeometry, material);
+			const cylinder = new THREE.Mesh(cylinderGeometry, Env.material);
 			cylinder.userData.framing = {
 				link: true,
 				node: false,
@@ -347,12 +345,14 @@ function init() {
 			floorArea.splice(floorArea.focusIndex + 1, 0, sphere);
 			floorArea.splice(floorArea.focusIndex + 2, 0, cylinder);
 			Framing.placeLink(cylinder, sphere, next);
+
+			floorArea.focusNode(sphere);
 		} else {
 			if (floorArea.length > 0) {
 				const previous = floorArea[floorArea.length - 1];
 
 				const cylinderGeometry = new THREE.CylinderGeometry(lineRadius, lineRadius, 1, 9, 1, true);
-				const cylinder = new THREE.Mesh(cylinderGeometry, material);
+				const cylinder = new THREE.Mesh(cylinderGeometry, Env.material);
 				cylinder.userData.framing = {
 					link: true,
 					node: false,
