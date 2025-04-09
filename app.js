@@ -9,6 +9,8 @@ import * as Env from './environment.js';
 
 import * as Util from './util.js';
 
+import * as UI from './ui.js';
+
 const BALL_COUNT = 1000;
 const ENABLE_AMMO = false;
 
