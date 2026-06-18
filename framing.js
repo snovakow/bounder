@@ -1,19 +1,23 @@
 import { Vector3 } from 'three';
 
 class FrameArray extends Array {
-    constructor(...args) {
-        super(...args);
+    static FLOOR = "floor";
+    static WALL = "wall";
+    static TRACK = "track";
+
+    constructor(type) {
+        super();
         this.focusIndex = -1;
     }
-    focusNode(framingNode) {
+    nodeIndex(framingNode) {
         for (const [i, node] of this.entries()) {
-            if (node === framingNode) {
-                this.focusIndex = i;
-                return true;
-            }
+            if (node === framingNode) return i;
         }
-        this.focusIndex = -1;
-        return false;
+        return -1;
+    }
+    focusNode(framingNode) {
+        this.focusIndex = this.nodeIndex(framingNode);
+        return (this.focusIndex >= 0);
     }
     isNode() {
         if (this.focusIndex < 0) return false;
@@ -42,6 +46,10 @@ class FrameArray extends Array {
         return null;
     }
 }
+Object.freeze(FrameArray.FLOOR);
+Object.freeze(FrameArray.WALL);
+Object.freeze(FrameArray.TRACK);
+Object.seal(FrameArray);
 
 const upBasis = new Vector3(0, 1, 0);
 Object.freeze(upBasis);

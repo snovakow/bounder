@@ -313,7 +313,24 @@ function init() {
 	}
 	Env.renderer.setAnimationLoop(animate);
 
-	const floorArea = new Framing.FrameArray();
+	const floors = [];
+	const walls = [];
+	const tracks = [];
+	const findBound = (node) => {
+		for (const bound of floors) {
+			if (bound.nodeIndex(node) >= 0) return bound;
+		}
+		for (const bound of walls) {
+			if (bound.nodeIndex(node) >= 0) return bound;
+		}
+		for (const bound of tracks) {
+			if (bound.nodeIndex(node) >= 0) return bound;
+		}
+		return null;
+	}
+	let selectedBound = null;
+	let selectedFrameNode = null;
+
 	const addPoint = (position, link = null) => {
 		const radius = 0.1;
 		const lineRadius = radius * 0.5;
@@ -350,6 +367,8 @@ function init() {
 
 			floorArea.focusNode(sphere);
 		} else {
+			new Framing.FrameArray();
+
 			if (floorArea.length > 0) {
 				const previous = floorArea[floorArea.length - 1];
 
@@ -367,7 +386,7 @@ function init() {
 			}
 			floorArea.push(sphere);
 		}
-		return sphere;
+		selectedFrameNode = sphere;
 	}
 
 	const moveFramingNode = (framingNode, position) => {
@@ -398,7 +417,6 @@ function init() {
 	}
 	let dragging = false;
 	let mouseDown = false;
-	let selectedFrameNode = null;
 	const mousedownEvent = (event) => {
 		if (Util.isRightMouse(event)) return;
 		if (!event.shiftKey) return;
@@ -412,15 +430,23 @@ function init() {
 			if (hit.object.userData.framing) {
 				let triggered = false;
 				if (hit.object.userData.framing.node) {
-					selectedFrameNode = hit.object;
-					triggered = true;
+					selectedBound = findBound(hit.object);
+					if (selectedBound) {
+						selectedFrameNode = hit.object;
+						triggered = true;
+					}
 				}
 				if (hit.object.userData.framing.link) {
-					selectedFrameNode = addPoint(hit.point, hit.object);
-					triggered = true;
+					selectedBound = findBound(hit.object);
+					if (selectedBound) {
+						addPoint(hit.point, hit.object);
+						triggered = true;
+					}
 				}
 				if (hit.object.userData.framing.base) {
-					selectedFrameNode = addPoint(hit.point);
+					selectedBound = new Framing.FrameArray();
+					floors.push(selectedBound);
+					addPoint(hit.point);
 					triggered = true;
 				}
 
