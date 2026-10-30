@@ -72,13 +72,13 @@ These are the defaults the prompts follow. Change a row before running the phase
 
 ## 3. How to run a phase
 
-1. Read the phase, and do its **You** steps in a terminal at the repository root.
+1. Read the phase, and do its **You** steps: git steps in GitHub Desktop, and the rest in a terminal at the repository root.
 2. Open a fresh Claude Code thread in this repository and paste the phase's **Prompt**. The agent reads this file, does that phase only, runs the checks, and summarises without committing.
 3. Do the phase's **Check** yourself and ask for fixes in the same thread.
 4. Open another fresh thread and run `/commit` with a note naming the phase, such as `/commit Phase 5 of docs/r3f-port-plan.md`. It has to be the thread's first message: the skill stops otherwise, because a thread that wrote the code can't review it from the repository alone. The note lets it read the phase for intent. It fixes what it can in commits that aren't pushed yet, such as a vague message, and asks before committing over a failing check or anything else it can't settle.
 5. Start the next phase in a new thread.
 
-If a phase goes badly, `git status` shows what it touched. `git restore --staged --worktree .` reverts the tracked files; `git clean -nd` lists the new files, and `git clean -fd` deletes them once you've checked that list. Then run the prompt again.
+If a phase goes badly, GitHub Desktop's Changes tab shows what it touched. **Branch → Discard All Changes…** puts the changed files back and moves the new ones to the Trash. Check the list first: it also discards anything else that isn't committed, such as Phase 1's moves while Phase 2 is under way. Then run the prompt again.
 
 ## 4. Phases
 
@@ -107,18 +107,8 @@ If a phase goes badly, `git status` shows what it touched. `git restore --staged
 **You**
 
 1. In a fresh Claude Code thread here, run `/commit Plan and tooling for the React Three Fiber port`. Expect separate commits for the `/commit` skill, the public README, this plan and `bounder.code-workspace` (your other repositories track theirs). There's no version commit yet, because there's no `package.json` until Phase 2 (D10).
-2. Tag the result, so the prompts can still read the prototype after its files are deleted:
-
-   ```sh
-   git tag legacy-webpack
-   ```
-
-   The tag stays local unless you push it with `git push origin legacy-webpack`.
-3. Push `development`, which puts it on GitHub for the first time:
-
-   ```sh
-   git push -u origin development
-   ```
+2. Tag the result, so the prompts can still read the prototype and this plan after their files are deleted. In GitHub Desktop's History tab, right-click the newest commit, the run's last, choose **Create Tag…**, and name it `legacy-webpack`. Desktop pushes the tags it creates with the next push, so it goes to GitHub with the branch.
+3. Push `development`, which puts it on GitHub for the first time: click **Publish branch**.
 
    Until the first version commit, a run's baseline is the newest pushed commit, so pushing is what closes this run. Without the push, Phase 2's run would ask about these commits before reading them; answering that it should keep them all, as already reviewed, does the same.
 
@@ -126,17 +116,17 @@ If a phase goes badly, `git status` shows what it touched. `git restore --staged
 
 **You**
 
+GitHub Desktop's Changes tab should show no changes. Then, in a terminal:
+
 ```sh
-git status        # expect a clean tree
 mkdir -p public/models public/ammo
-git mv include/models/gltf/collision-world.glb public/models/
-git mv include/ammo.wasm.js include/ammo.wasm.wasm public/ammo/
-rmdir include/models/gltf include/models include    # git mv leaves the empty folders; this fails if anything is left
-git rm -q webpack.config.js main.js index.html app.js environment.js framing.js collision.js ui.js util.js
-git status        # 3 renames and 9 deletions, all staged
+mv include/models/gltf/collision-world.glb public/models/
+mv include/ammo.wasm.js include/ammo.wasm.wasm public/ammo/
+rmdir include/models/gltf include/models include    # fails if anything is left
+rm webpack.config.js main.js index.html app.js environment.js framing.js collision.js ui.js util.js
 ```
 
-Don't commit yet; Phase 2 commits both phases together.
+The Changes tab now shows the nine prototype files deleted and the three assets moved from `include/` to `public/`. Don't commit yet; Phase 2's `/commit` commits both phases together.
 
 ### Phase 2: scaffold Vite in place and install the 3D stack
 
@@ -149,15 +139,11 @@ Don't commit yet; Phase 2 commits both phases together.
    ```
 
    Answer its prompts like this:
-   - *Current directory is not empty*: **Ignore files and continue**. Not "Remove existing files", which deletes everything except `.git`, including `.claude/`, `docs/` and the moved assets. Since those are committed or staged, `git restore .` would bring them back, but don't.
+   - *Current directory is not empty*: **Ignore files and continue**. Not "Remove existing files", which deletes everything except `.git`, including `.claude/`, `docs/` and the moved assets. Since everything but the moves is committed, **Discard All Changes** in GitHub Desktop would bring it back, with the assets in `include/` again for Phase 1 to redo, but don't.
    - *Which linter to use?*: **Oxlint** (D1).
    - *Install with npm and start now?*: **No**.
 
-   It writes the template's files into the folder, overwriting `README.md` and `.gitignore`. Keep its `.gitignore`, which already covers `.DS_Store`, and bring back the public README:
-
-   ```sh
-   git restore README.md
-   ```
+   It writes the template's files into the folder, overwriting `README.md` and `.gitignore`. Keep its `.gitignore`, which already covers `.DS_Store`, and bring back the public README: in GitHub Desktop's Changes tab, right-click `README.md` and choose **Discard Changes…**.
 
 2. Install everything at its latest version (D14): the template's own packages, which create-vite pins a little behind and TypeScript a major behind, and the 3D stack. Then add the override that makes every package share the app's three, replace the template's `0.0.0` with the prototype's last version, `0.1.1` (D10), and install once more:
 
@@ -340,20 +326,14 @@ Read docs/r3f-port-plan.md in full. Carry out Phase 9 only: review the finished 
 1. Delete this plan. Read the rest of this phase first; afterwards it is only in git history, for example `git show legacy-webpack:docs/r3f-port-plan.md`.
 
    ```sh
-   git rm -q docs/r3f-port-plan.md
+   rm docs/r3f-port-plan.md
    ```
 
    Then, in a fresh thread, run `/commit 0.2.0 Remove the port plan now that the port is done`. The scan lists the plan among the deleted files, and the run drops the README's link to it in the same batch. Its last commit is `Version 0.2.0`, the port's first release (D10).
-2. Merge and push:
-
-   ```sh
-   git switch main
-   git merge --ff-only development
-   git push origin main
-   git switch development
-   ```
-
-   If `--ff-only` refuses, `main` has commits that `development` lacks. Merge `main` into `development`, run `/commit` if the merge needs fixes, and try again.
+2. Merge and push, in GitHub Desktop:
+   1. With `development` checked out, choose **Branch → Merge into Current Branch…** and pick `main`. It should say `development` is already up to date with it, meaning `main` has no commits that `development` lacks; close the dialog. If it finds commits instead, merge them, run `/commit` if the merge needs fixes, and start this step again.
+   2. Switch **Current Branch** to `main`, choose **Branch → Merge into Current Branch…**, and merge `development`. Since `main` has nothing of its own, this fast-forwards, with no merge commit.
+   3. Click **Push origin**, then switch back to `development`.
 3. Build and deploy:
 
    ```sh
@@ -363,7 +343,12 @@ Read docs/r3f-port-plan.md in full. Carry out Phase 9 only: review the finished 
 
    Replace the contents of `~/Sites/localhost/live/bounder/` with those of `dist/`, then publish `live/` to snovakow.com the way you do for the other sites. The webpack files there (`main.js`, its hashed chunks and their licence file, `include/`) aren't used any more. `pack.sh` in the old web root rebuilds this folder from the webpack prototype, so don't run it for bounder again.
 4. Open https://snovakow.com/bounder/ and check that the scene loads with no 404s, and that the Network panel shows gtag.
-5. Optionally, delete the tag once you no longer need it: `git tag -d legacy-webpack`.
+5. Optionally, delete the tag once you no longer need it. GitHub Desktop deletes only tags that haven't been pushed, and this one went to GitHub in Phase 0, so it takes the command line:
+
+   ```sh
+   git tag -d legacy-webpack
+   git push origin --delete legacy-webpack
+   ```
 
 ## 5. The /commit skill
 
