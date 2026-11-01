@@ -53,7 +53,14 @@ Points stay on the room's surfaces as you drag them.
 
 ## Running it locally
 
-Until the rebuild lands, a fresh clone doesn't run on its own, because the prototype expects a local three.js checkout and a site-wide loader script in folders outside the repository. Afterwards it runs like any Vite app: `npm install`, then `npm run dev`.
+You need [Node.js](https://nodejs.org) 20.19 or later. Then, in a clone:
+
+```sh
+npm install
+npm run dev
+```
+
+and open the address it prints. The rebuild is still in progress, so for now that shows an empty scene; the live demo is the original prototype.
 
 ## Credits
 
