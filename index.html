@@ -1,10 +1,26 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Google tag (gtag.js), on the live site only -->
+    <script>
+      if (location.host === 'snovakow.com') {
+        const gtagScript = document.createElement('script')
+        gtagScript.async = true
+        gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-DV1KLMY93N'
+        document.head.prepend(gtagScript)
+
+        window.dataLayer = window.dataLayer || []
+        function gtag() { dataLayer.push(arguments) }
+        gtag('js', new Date())
+
+        gtag('config', 'G-DV1KLMY93N')
+      }
+    </script>
+
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="description" content="Bounder: mark out the bounds of a 3D room in the browser by laying chains of points on its surfaces." />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>bounder</title>
+    <title>Bounder</title>
   </head>
   <body>
     <div id="root"></div>
