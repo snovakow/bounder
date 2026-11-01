@@ -185,19 +185,20 @@ Read docs/r3f-port-plan.md: sections 1 and 2, Phase 3, and Appendix C. Carry out
 4. `vite.config.ts`: `base: ''` (D9), with a one-line comment saying why. Define `__APP_VERSION__` from `package.json`'s version, as `../timspicks/vite.config.ts` does, declare it for TypeScript, and have `src/main.tsx` log `App Version: <version>` at startup with `console.info`, as the old loader did (D6). three, R3F and drei make one chunk of about 1.4 MB, so raise `build.chunkSizeWarningLimit` to cover it rather than splitting chunks; it's one scene.
 5. `package.json`: add `"typecheck": "tsc -b"` and `"lint:fix": "oxlint --fix"` to the template's scripts. Leave the version alone; only `/commit` changes it (D10).
 6. `.oxlintrc.json` (D1): keep the template's plugins and rules, and:
-   - ignore `public/**`, the vendored Ammo build
+   - ignore `public/**`, the vendored Ammo build, and `.claude/**`, whose `/commit` scan script stays word for word the Claude-Skills baseline (section 5) and fails type-aware `require-array-sort-compare` on two sorts
    - make the `correctness` category errors, and add `suspicious` as warnings
+   - allow `__APP_VERSION__` in `no-underscore-dangle`, which `suspicious` brings in: `"no-underscore-dangle": ["warn", { "allow": ["__APP_VERSION__"] }]`. The rule stays on for every other name
    - turn off `react/react-in-jsx-scope`, which `suspicious` brings in and React's automatic JSX runtime makes obsolete; with warnings failing, it would fail every `.tsx` file
    - make warnings fail the run (`options.denyWarnings`)
    - turn on type-aware rules: `npm install --save-dev oxlint-tsgolint@latest`, then `options.typeAware`. This was checked with TypeScript 7; if it fails anyway, stop and say why.
    - leave the React Compiler-style rules, such as `react(immutability)`, on, and write code that satisfies them (Appendix C, item 9)
 
-   With ESLint instead, get the same in `eslint.config.js`: `globalIgnores(['dist', 'public'])`, `tseslint.configs.recommendedTypeChecked` with `parserOptions.projectService`, `@react-three/eslint-plugin`'s `no-clone-in-loop` and `no-new-in-loop` as errors, and `eslint . --max-warnings 0`.
+   With ESLint instead, get the same in `eslint.config.js`: `globalIgnores(['dist', 'public', '.claude'])`, `tseslint.configs.recommendedTypeChecked` with `parserOptions.projectService`, `@react-three/eslint-plugin`'s `no-clone-in-loop` and `no-new-in-loop` as errors, and `eslint . --max-warnings 0`.
 7. `src/features.ts`: `export const ammoPhysics = false;`, with a comment saying what it switches (D5).
 8. `bounder.code-workspace`: `files.exclude` for `**/node_modules` and `**/dist`, as your other workspaces have.
 9. `README.md`: a fresh clone now runs. Update "Running it locally" to say how (Node.js 20.19 or later, `npm install`, `npm run dev`), and keep saying that the rebuild is in progress. Keep its public voice.
 
-**Check** `npm run dev` shows an empty page with no console errors, and the elements panel shows a `<canvas>` filling the window.
+**Check** `npm run dev` shows an empty page with no console errors, and the elements panel shows a `<canvas>` filling the window, two `<div>`s down (`#root > div > div > canvas`), where R3F nests it. Expect one console warning, `THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.` It's R3F's: R3F 9 still makes a `THREE.Clock`, which three deprecated in r183. It needs nothing, and it goes once a stable R3F 10 replaces the clock.
 
 ### Phase 4: port the geometry helpers
 
@@ -239,7 +240,7 @@ Read docs/r3f-port-plan.md: section 2, Phase 5 and Appendices A, B and C. Carry 
 - Reach the renderer through `get()` (item 9).
 - leva folders: Sun, Sky, Light and shadows, Renderer. Include every control in Appendix A's panel table, with the same ranges and defaults.
 
-**Check** The sky looks like the live demo's plus clouds, and a cloud coverage of 0 gives the live demo's cloudless sky. Sun phi and theta move the sun; the sky sliders change the sky; tone mapping and shadow type switch with no console warnings; Stats shows in a corner. Shadows and reflections can't be judged until Phase 6 adds something to show them.
+**Check** The sky looks like the live demo's plus clouds, and a cloud coverage of 0 gives the live demo's cloudless sky. Sun phi and theta move the sun; the sky sliders change the sky; tone mapping and shadow type switch with no new console warnings; Stats shows in a corner. Shadows and reflections can't be judged until Phase 6 adds something to show them.
 
 ### Phase 6: room, balls and walking
 
