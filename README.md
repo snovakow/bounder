@@ -17,7 +17,7 @@ Bounder is a browser-based 3D prototype for marking out the bounds of a space on
 | [Vite](https://vite.dev) | The dev server and the production build |
 | [WebGL](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API) | The GPU API three.js renders with |
 
-Around them are drei's helpers, a leva debug panel, zustand for shared state, Ammo.js for physics and Oxlint for linting.
+Around them are drei's helpers, a lil-gui debug panel, zustand for shared state, Ammo.js for physics and Oxlint for linting.
 
 The rebuild onto this stack is in progress. The live demo and the code on `main` are still the original prototype: plain three.js, bundled with webpack.
 
@@ -60,7 +60,7 @@ npm install
 npm run dev
 ```
 
-and open the address it prints. The rebuild is still in progress, so for now that shows an empty scene; the live demo is the original prototype.
+and open the address it prints. The rebuild is still in progress, so for now that shows only the sky, with the debug panel to tune it. The view starts looking straight down, where the room will go, so drag upward to see the horizon. The live demo is the original prototype.
 
 ## Credits
 
