@@ -1,14 +1,18 @@
 import { useGLTF } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
+import type { ThreeElements } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { Mesh } from 'three'
 import { useSceneStore } from './store.ts'
 
 const modelUrl = `${import.meta.env.BASE_URL}models/collision-world.glb`
 
+type RoomProps = Pick<ThreeElements['mesh'], 'onPointerDown' | 'onPointerMove'>
+
 // The test room: the model's one mesh, with its world transform baked into the geometry, so raycasts and the physics
-// trimesh see world-space vertices. It suspends while the model loads
-export function Room() {
+// trimesh see world-space vertices. It suspends while the model loads. It's the framing editor's base surface, and
+// passes the editor's pointer handlers on to its mesh
+export function Room({ onPointerDown, onPointerMove }: RoomProps) {
   const { scene } = useGLTF(modelUrl)
   const anisotropy = useThree((s) => s.gl.capabilities.getMaxAnisotropy())
   // The sky cube, which Environment set before the model finished loading. A material without an envMap of its own
@@ -47,6 +51,8 @@ export function Room() {
       material-map-anisotropy={anisotropy}
       castShadow
       receiveShadow
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
     />
   )
 }

@@ -40,6 +40,7 @@ The rebuild onto this stack is in progress. The live demo and the code on `main`
 | Add a point | Shift-click the room |
 | Move a point | Shift-drag it |
 | Insert a point into a link | Shift-click the link |
+| Start a new chain | Choose another type in the panel at the bottom right, then shift-click the room |
 
 Points stay on the room's surfaces as you drag them.
 
@@ -60,7 +61,7 @@ npm install
 npm run dev
 ```
 
-and open the address it prints. The rebuild is still in progress, so for now that shows the room under the sky, with the physics test's balls hanging above it and the debug panel to tune the daylight. You can look around and walk through the room; the bounds editor and the physics are still to come. The live demo is the original prototype.
+and open the address it prints. The rebuild is still in progress, so for now that shows the room under the sky, with the physics test's balls hanging above it and the debug panel to tune the daylight. You can look around, walk through the room and draw bounds on it; the physics is still to come. The live demo is the original prototype.
 
 ## Credits
 

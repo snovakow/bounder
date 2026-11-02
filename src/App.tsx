@@ -1,4 +1,5 @@
 import { Canvas } from '@react-three/fiber'
+import { EditorPanel } from './editor/EditorPanel.tsx'
 import { DebugPanel } from './scene/DebugPanel.tsx'
 import { Scene } from './scene/Scene.tsx'
 
@@ -14,6 +15,7 @@ function App() {
         <Scene />
       </Canvas>
       <DebugPanel />
+      <EditorPanel />
     </>
   )
 }

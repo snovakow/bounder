@@ -6,3 +6,15 @@ body,
   margin: 0;
   overflow: hidden;
 }
+
+/* The framing editor's panel, over the canvas in the bottom-right corner */
+.editor-panel {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background: white;
+}
