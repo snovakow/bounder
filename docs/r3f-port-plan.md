@@ -59,7 +59,7 @@ These are the defaults the prompts follow. Change a row before running the phase
 | D11 | The prototype's defects | Fix them as Appendix B says; strict TypeScript rejects most of them anyway | Port them as they are |
 | D12 | This plan | Deleted in Phase 10, before the merge to `main`; git history keeps it | Keep it under `docs/` |
 | D13 | Renderer (confirmed) | R3F's default **`WebGLRenderer`**, antialiased, as the prototype used. GLSL shaders, drei's WebGL helpers such as `<Environment>`, which renders the sky into the environment cube (Phase 5), and `@react-three/postprocessing` all stay available (Appendix C) | three's `WebGPURenderer` (`three/webgpu`) through an async `gl` factory: only node materials run under it, so the sky and its environment cube have to be built by hand, and drei's GLSL helpers and postprocessing are out |
-| D14 | Versions | **Latest of everything** at install time, and again whenever `/commit` reports something behind (`npm outdated`). TypeScript moves from the template's 6.0 pin to 7.0. One npm override, `"three": "$three"`, makes drei's `stats-gl` share the app's three instead of bundling its own `0.170`. Deliberate holds: Node.js 24 LTS, because Node 26 won't start on this Mac's macOS 12.7 (it needs 13.5); `@types/node` 24 to match it; and React within R3F's peer range (19.0 to 19.3, which is also the latest today) | Keep the template's pins |
+| D14 | Versions | **Latest of everything** at install time, and again whenever `/commit` reports something behind (`npm outdated`). create-vite's template already pins TypeScript 7.0. One npm override, `"three": "$three"`, makes drei's `stats-gl` share the app's three instead of bundling its own `0.170`. Deliberate holds: Node.js 24 LTS, because Node 26 won't start on this Mac's macOS 12.7 (it needs 13.5); `@types/node` 24 to match it; and React within R3F's peer range (19.0 to 19.3, which is also the latest today) | Keep the template's pins |
 
 **D6: what the shared loader did.** `../lib/main.js` belongs to the old web root, `~/Sites/localhost/dev/lib/main.js` (the deprecated `snovakow/web` repository, with this repository as a submodule), and the live build bundles it (webpack chunk `eba323d8bfc239382c69.js`). Its `initialize()` did four things: logged `App Version: 0.1.1`, read from the `main.js?0.1.1` query string; inserted the gtag script and its `dataLayer` setup at the top of `<head>` when given an ID, which `main.js` passed only on snovakow.com; added stylesheet links when given any, which Bounder never was; and resolved once the DOM had loaded. The port keeps the first two. Module scripts already run after the DOM loads.
 
@@ -145,17 +145,17 @@ The Changes tab now shows the nine prototype files deleted and the three assets 
 
    It writes the template's files into the folder, overwriting `README.md` and `.gitignore`. Keep its `.gitignore`, which already covers `.DS_Store`, and bring back the public README: in GitHub Desktop's Changes tab, right-click `README.md` and choose **Discard Changes…**.
 
-2. Install everything at its latest version (D14): the template's own packages, which create-vite pins a little behind and TypeScript a major behind, and the 3D stack. Then add the override that makes every package share the app's three, replace the template's `0.0.0` with the prototype's last version, `0.1.1` (D10), and install once more:
+2. Install everything at its latest version (D14): the template's own packages, which create-vite pins a little behind, and the 3D stack. Then add the override that makes every package share the app's three, replace the template's `0.0.0` with the prototype's last version, `0.1.1` (D10), and install once more:
 
    ```sh
    npm install
-   npm install react@latest react-dom@latest three@latest @react-three/fiber@latest @react-three/drei@latest leva@latest zustand@latest
+   npm install react@latest react-dom@latest three@latest @react-three/fiber@latest @react-three/drei@latest zustand@latest
    npm install --save-dev vite@latest @vitejs/plugin-react@latest typescript@latest oxlint@latest @types/react@latest @types/react-dom@latest @types/three@latest @types/node@24
    npm pkg set 'overrides.three=$three' version=0.1.1
    npm install
    ```
 
-   Leave out `leva` or `zustand` if you changed D3 or D4. npm 12 runs no install scripts that haven't been approved, so it warns that `fsevents`' was skipped. That's harmless: it's an optional macOS file watcher, and the dev server, lint and build work without it.
+   Add `leva@latest` if you changed D3 to leva, and leave out `zustand` if you changed D4. npm 12 runs no install scripts that haven't been approved, so it warns that `fsevents`' was skipped. That's harmless: it's an optional macOS file watcher, and the dev server, lint and build work without it.
 
 3. Check that there is one three.js, with types from the same release, and that nothing is behind:
 
@@ -196,7 +196,7 @@ Read docs/r3f-port-plan.md: sections 1 and 2, Phase 3, and Appendix C. Carry out
    With ESLint instead, get the same in `eslint.config.js`: `globalIgnores(['dist', 'public', '.claude'])`, `tseslint.configs.recommendedTypeChecked` with `parserOptions.projectService`, `@react-three/eslint-plugin`'s `no-clone-in-loop` and `no-new-in-loop` as errors, and `eslint . --max-warnings 0`.
 7. `src/features.ts`: `export const ammoPhysics = false;`, with a comment saying what it switches (D5).
 8. `bounder.code-workspace`: `files.exclude` for `**/node_modules` and `**/dist`, as your other workspaces have.
-9. `README.md`: a fresh clone now runs. Update "Running it locally" to say how (Node.js 20.19 or later, `npm install`, `npm run dev`), and keep saying that the rebuild is in progress. Keep its public voice.
+9. `README.md`: a fresh clone now runs. Update "Running it locally" to say how (Node.js 22.12 or later, which Vite 8 and drei's camera-controls need, `npm install`, `npm run dev`), and keep saying that the rebuild is in progress. Keep its public voice.
 
 **Check** `npm run dev` shows an empty page with no console errors, and the elements panel shows a `<canvas>` filling the window, two `<div>`s down (`#root > div > div > canvas`), where R3F nests it. Expect one console warning, `THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.` It's R3F's: R3F 9 still makes a `THREE.Clock`, which three deprecated in r183. It needs nothing, and it goes once a stable R3F 10 replaces the clock.
 
@@ -253,12 +253,12 @@ Read docs/r3f-port-plan.md: section 2, Phase 6 and Appendices A, B and C. Carry 
 **The work**
 
 - `src/scene/materials.ts`: the shared blue `MeshStandardMaterial`, used by the balls now and the editor's points and links later.
-- `Room`: load `models/collision-world.glb` with drei's `useGLTF`, prefixed with `import.meta.env.BASE_URL` (Appendix C, item 10), under `<Suspense>`. Take its one mesh, bake its world transform into a cloned geometry, never the cached one (item 8), and render it with the model's material set up as Appendix A says, taking the texture's anisotropy from `gl.capabilities.getMaxAnisotropy()`, as the prototype did (item 2). Give the material the sky cube as its own `envMap`, read with `useThree((s) => s.scene.environment)`, as the prototype also did; without it, the room's `envMapIntensity` of 0.3 is ignored (item 6). Keep the baked mesh in a small zustand store, `src/scene/store.ts`, so walking, the editor and physics can reach it.
+- `Room`: load `models/collision-world.glb` with drei's `useGLTF`, prefixed with `import.meta.env.BASE_URL` (Appendix C, item 10), under `<Suspense>`. Take its one mesh, bake its world transform into a cloned geometry, never the cached one (item 8), and render it with the model's material set up as Appendix A says, taking the texture's anisotropy from `gl.capabilities.getMaxAnisotropy()`, as the prototype did (item 2). Give the material the sky cube as its own `envMap`, read with `useThree((s) => s.scene.environment)`, as the prototype also did; without it, the room's `envMapIntensity` of 0.3 is ignored (item 6). Keep the baked mesh in a small zustand store, `src/scene/store.ts`, so walking and physics can reach it. The editor needs no store entry: it gets the room's hits through its pointer handlers (Phase 7).
 - Once the room is in, place the camera as Appendix A says: a raycast down from (0, 10, 0), eye height 1.6, orbit target (0, 0, −1).
 - `Balls`: the instanced spheres, laid out by Appendix A's formula, unchanged, including its fractional modulo. Hold their positions in a ref for Phase 8 (items 12 and 13).
 - `WalkControls`: WASD as Appendix A says. Ignore keys until the room is in (B8).
 
-**Check** The room appears with its blue grid, and surfaces facing away from the sun are the live demo's deep blue. The sun's shadows are there but faint, much fainter than the live demo's (confirmed): three r187 lights rough surfaces from the sky more strongly than the April 2025 three.js the live demo was built with, and the prototype's own code looks the same on r187. Raising the sun's intensity makes them plain. The view starts at eye height, looking slightly down. The balls hang above the room in a slanted grid. WASD steps you around and follows the floor; orbiting still works.
+**Check** The room appears with its blue grid, and surfaces facing away from the sun are the live demo's deep blue. The sun's shadows are there but faint, much fainter than the live demo's (confirmed): three r187 lights rough surfaces from the sky more strongly than the April 2025 three.js the live demo was built with, and the prototype's own code looks the same on r187. Raising the sun's intensity makes them plain. The view starts at eye height, tilted about 8° up: this room's floor below the starting point puts the eye a little below the orbit target, in the prototype too. The balls hang above the room in a slanted grid. WASD steps you around and follows the floor; orbiting still works.
 
 ### Phase 7: framing editor and panel
 
@@ -275,7 +275,7 @@ Read docs/r3f-port-plan.md: section 2 (especially D7), Phase 7 and Appendices A,
 - Pointer handling with R3F's events (Appendix C, item 11; B10):
   - Shift plus the primary button only; everything else goes to the orbit controls.
   - `stopPropagation`, so only the nearest point, link or room surface reacts.
-  - Disable the orbit controls (`useThree((s) => s.controls)`) while dragging, and re-enable them on `pointerup` anywhere in the window.
+  - Disable the orbit controls while dragging, reaching them through `get()` (item 9) from a store subscription, so they're off before they see the press that starts the drag, and re-enable them on `pointerup` anywhere in the window.
   - A dragged point follows the room under the pointer, through the room's `onPointerMove`.
 - `EditorPanel`, a DOM component outside the Canvas: bottom-right, white, 8px padding, a column with the type select (Floor, Wall, Track) and the Loop checkbox, bound to the store and drawn above the canvas.
 
@@ -298,11 +298,11 @@ Read docs/r3f-port-plan.md: section 2 (D5), Phase 8 and Appendices A, B and C. C
 **The work**
 
 - `src/physics/ammo.ts`: load `ammo/ammo.wasm.js`, prefixed with `import.meta.env.BASE_URL`, with a script tag, once. Then await `Ammo()` and use the module it resolves to (Appendix C, item 15).
-- `src/physics/ammo-api.d.ts`, named so TypeScript doesn't skip it as the declarations of `ammo.ts`: global declarations for only the Ammo API in use: the world's parts (default collision configuration, collision dispatcher, DBVT broadphase, sequential impulse solver, discrete dynamics world), `btVector3`, `btTransform`, `btQuaternion`, the sphere and BVH triangle mesh shapes, `btTriangleMesh`, `btDefaultMotionState`, `btRigidBodyConstructionInfo`, `btRigidBody`, and `destroy`.
+- `src/physics/ammo-api.d.ts`, named so TypeScript doesn't skip it as the declarations of `ammo.ts`: global declarations for only the Ammo API in use: the world's parts (default collision configuration, collision dispatcher, DBVT broadphase, sequential impulse solver, discrete dynamics world), `btVector3`, `btTransform`, the sphere and BVH triangle mesh shapes, `btTriangleMesh`, `btDefaultMotionState`, `btRigidBodyConstructionInfo`, `btRigidBody`, and `destroy`.
 - `AmmoPhysics`, mounted only when `ammoPhysics` is true: the world, the ball bodies and the room body as Appendix A says, with the room built from the baked geometry's own index (B3). Step in `useFrame` with R3F's delta (seconds) and 10 substeps, and copy each body's origin into its ball instance (item 13). Free everything with `Ammo.destroy` on unmount, since StrictMode mounts twice in development.
 - Drop the unused debug plane (B9). With the flag off, nothing requests Ammo.
 
-**Check** Set `ammoPhysics` to true locally: the balls fall, bounce and settle on the room, and Stats shows the frame rate holding. Set it back to false, and the Network panel shows no request for `ammo.wasm.js`.
+**Check** Set `ammoPhysics` to true locally: the balls fall, bounce and settle on the room, apart from the 80 or so that the layout starts beyond the room's edges, which keep falling. Stats shows the frame rate dipping while they pile up, since a step then takes longer than a frame, and recovering as they settle. Set it back to false, and the Network panel shows no request for `ammo.wasm.js`.
 
 ### Phase 9: parity review and README
 
@@ -315,8 +315,9 @@ Read docs/r3f-port-plan.md in full. Carry out Phase 9 only: review the finished 
 **The work**
 
 - Go through Appendix A line by line against the code. Fix what differs unintentionally, and list the deliberate differences, such as D8, PCFSoft's removal, three r187's fainter shadows, the half-float environment cube and the Appendix B fixes.
+- The editor panel's type select gives up focus once a type is picked (confirmed), so WASD only walks. Left focused, the browser's type-ahead turns W into a switch to Wall, and since the type now drives new bounds (B12), that changes what the next shift-click does. The prototype's select kept focus too, but nothing read it.
 - Remove leftovers: template files or text (the Vite and React logos, "Vite + React", `App.css`), dependencies nothing imports (compare `npm ls --depth=0` with the imports), `any` or lint suppressions without a stated reason, and `console.log`.
-- README.md, for a public reader. Keep the stack line, the Stack table and the Workflow section, and bring the rest up to date: what Bounder is, the live demo, what's in it, the controls including the debug panel, running it (Node.js 20.19 or later, `npm install`, `npm run dev`), building it (`npm run build` makes a static site in `dist/` that works from any folder), its status (the rebuild is done, and the live demo follows once it's deployed), and credits. No file paths or internal values; keep the existing voice. Keep the link to this plan for now; Phase 10 removes it.
+- README.md, for a public reader. Keep the stack line, the Stack table and the Workflow section, and bring the rest up to date: what Bounder is, the live demo, what's in it, the controls including the debug panel, running it (Node.js 22.12 or later, which Vite 8 and drei's camera-controls need, `npm install`, `npm run dev`), building it (`npm run build` makes a static site in `dist/` that works from any folder), its status (the rebuild is done, and the live demo follows once it's deployed), and credits. No file paths or internal values; keep the existing voice. Keep the link to this plan for now; Phase 10 removes it.
 
 **You** Walk the agent's checklist in `npm run dev` and again in `npm run preview`. Then, in a fresh thread, run `/commit Phase 9 of docs/r3f-port-plan.md`.
 
