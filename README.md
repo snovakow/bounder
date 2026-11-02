@@ -60,7 +60,7 @@ npm install
 npm run dev
 ```
 
-and open the address it prints. The rebuild is still in progress, so for now that shows only the sky, with the debug panel to tune it. The view starts looking straight down, where the room will go, so drag upward to see the horizon. The live demo is the original prototype.
+and open the address it prints. The rebuild is still in progress, so for now that shows the room under the sky, with the physics test's balls hanging above it and the debug panel to tune the daylight. You can look around and walk through the room; the bounds editor and the physics are still to come. The live demo is the original prototype.
 
 ## Credits
 
