@@ -24,7 +24,7 @@ bounder/
 │   ├── scene/                  Scene, SunAndSky, SkyEnvironment, SunLight, RendererSettings,
 │   │                           Room, Balls, WalkControls, DebugPanel, materials.ts, store.ts, panel.ts
 │   ├── editor/                 store.ts, FramingEditor.tsx, EditorPanel.tsx
-│   └── physics/                ammo.ts (loader), ammo.d.ts (typings), AmmoPhysics.tsx
+│   └── physics/                ammo.ts (loader), ammo-api.d.ts (typings), AmmoPhysics.tsx
 ├── index.html                  title, analytics (snovakow.com only), #root
 ├── vite.config.ts              base: '' for relative asset paths
 ├── .oxlintrc.json              lint rules (D1)
@@ -298,7 +298,7 @@ Read docs/r3f-port-plan.md: section 2 (D5), Phase 8 and Appendices A, B and C. C
 **The work**
 
 - `src/physics/ammo.ts`: load `ammo/ammo.wasm.js`, prefixed with `import.meta.env.BASE_URL`, with a script tag, once. Then await `Ammo()` and use the module it resolves to (Appendix C, item 15).
-- `src/physics/ammo.d.ts`: declarations for only the Ammo API in use: the world's parts (default collision configuration, collision dispatcher, DBVT broadphase, sequential impulse solver, discrete dynamics world), `btVector3`, `btTransform`, `btQuaternion`, the sphere and BVH triangle mesh shapes, `btTriangleMesh`, `btDefaultMotionState`, `btRigidBodyConstructionInfo`, `btRigidBody`, and `destroy`.
+- `src/physics/ammo-api.d.ts`, named so TypeScript doesn't skip it as the declarations of `ammo.ts`: global declarations for only the Ammo API in use: the world's parts (default collision configuration, collision dispatcher, DBVT broadphase, sequential impulse solver, discrete dynamics world), `btVector3`, `btTransform`, `btQuaternion`, the sphere and BVH triangle mesh shapes, `btTriangleMesh`, `btDefaultMotionState`, `btRigidBodyConstructionInfo`, `btRigidBody`, and `destroy`.
 - `AmmoPhysics`, mounted only when `ammoPhysics` is true: the world, the ball bodies and the room body as Appendix A says, with the room built from the baked geometry's own index (B3). Step in `useFrame` with R3F's delta (seconds) and 10 substeps, and copy each body's origin into its ball instance (item 13). Free everything with `Ammo.destroy` on unmount, since StrictMode mounts twice in development.
 - Drop the unused debug plane (B9). With the flag off, nothing requests Ammo.
 
