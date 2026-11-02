@@ -39,7 +39,7 @@ const LEAVE_ALONE = [];
 const NEVER_MENTION = [];
 // Prose the skill keeps true, as git pathspecs. Their backticked paths are checked against the
 // tree, and files that came or went since the baseline are listed beside them.
-// docs/ holds the user's plan for the work under way, which the skill commits but never edits.
+// A plan under docs/, when there is one, is the user's: the skill commits it but never edits it.
 const DOCS = ['README.md'];
 // Files that usually should not be tracked, checked against the files added since the baseline.
 const JUNK = [

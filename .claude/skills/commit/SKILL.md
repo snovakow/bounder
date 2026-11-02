@@ -43,12 +43,12 @@ Treat the repository as public. Whatever is committed, in code, comments, docs o
 The one block to adapt for a project. The steps below read it, and `scripts/scan.mjs` holds the same settings at its top; keep the two in step.
 
 - **Protected branches:** `main`, `master`. Work does not land on these. On one, stop and ask. Work lands on `development`, and the user merges it into `main`.
-- **Version commits:** `auto`: on when the scan reports a last version commit, or the arguments name a version; otherwise off, and the report says how to start. The version continues the prototype's, which left off at `0.1.1` in its page's cache-buster: the template's `package.json` carries `0.1.1`, and `/commit 0.1.2` makes the first version commit; from then on every run ends with one. Until the template adds `package.json` there is nothing to version, whatever the scan's Versioning line suggests.
+- **Version commits:** `auto`: on when the scan reports a last version commit, or the arguments name a version; otherwise off, and the report says how to start. The version continues the prototype's, which left off at `0.1.1` in its page's cache-buster, and `/commit 0.1.2` made the first version commit; from then on every run ends with one.
 - **Version shape:** the version lives in `package.json`. `npm version <x.y.z> --no-git-tag-version` sets it and updates `package-lock.json`. The commit touches only those two files, and the changelog where there is one, and its whole message is `Version X.Y.Z`. Only a version commit by snovakow counts.
 - **Changelog:** `auto`. When a `CHANGELOG.md` exists at the root or under `docs/`, the version commit also carries a new section for its number; the scan names the file. There is none yet.
 - **Checks:** the `lint`, `typecheck`, `check`, `test` and `build` scripts that `package.json` defines, whichever exist, run for what changed. The scan lists them. Then `npm outdated`, which reports rather than fails (Rules of this repository).
 - **Leave alone:** none.
-- **Maintained docs:** `README.md`, written for the public. The plan under `docs/` is the user's (Rules of this repository).
+- **Maintained docs:** `README.md`, written for the public. A plan under `docs/`, when there is one, is the user's (Rules of this repository).
 - **Never mention:** none.
 
 ## Rules of this repository
@@ -63,7 +63,7 @@ Bounder is a React Three Fiber app in TypeScript, built with Vite and rendered b
   - a flag in `src/features.ts` left on, since they ship off
 - **A change to this skill** goes at the top of the report.
 - **Dependencies stay current.** After the checks, run `npm outdated` (skip it offline) and list in the report what has fallen behind, apart from the deliberate holds: `@types/node` follows the Node in use, and React stays within React Three Fiber's peer range. A run never installs, upgrades or removes a package.
-- **The plan is the user's.** `docs/` holds the plan this work follows. Commit it as the user left it and never edit it, though it names paths on the user's machine for its deploy steps; say in the report when a change makes it inaccurate. The batch that deletes it also drops the README's link to it.
+- **A plan is the user's.** When `docs/` holds a plan for the work under way, commit it as the user left it and never edit it, even where it names paths on the user's machine for its deploy steps; say in the report when a change makes it inaccurate. The batch that deletes it also drops the README's link to it.
 - **The live site** is a static build of `main`. When a batch changes anything the build reads (`src/`, `public/`, `index.html`, the Vite config, `package.json` or `package-lock.json`), the report says that the site needs a rebuild and a deploy once it's merged.
 
 ## Rules that hold throughout
