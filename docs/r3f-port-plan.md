@@ -22,7 +22,7 @@ bounder/
 │   ├── features.ts             feature flags: ammoPhysics
 │   ├── lib/                    framing.ts (link maths, bound types), collision.ts (wall outlines, unfinished)
 │   ├── scene/                  Scene, SunAndSky, SkyEnvironment, SunLight, RendererSettings,
-│   │                           Room, Balls, WalkControls, materials.ts, store.ts
+│   │                           Room, Balls, WalkControls, DebugPanel, materials.ts, store.ts, panel.ts
 │   ├── editor/                 store.ts, FramingEditor.tsx, EditorPanel.tsx
 │   └── physics/                ammo.ts (loader), ammo.d.ts (typings), AmmoPhysics.tsx
 ├── index.html                  title, analytics (snovakow.com only), #root
@@ -48,12 +48,12 @@ These are the defaults the prompts follow. Change a row before running the phase
 | --- | --- | --- | --- |
 | D1 | Linter (chosen in Phase 2, configured in Phase 3) | **Oxlint**, create-vite's default: its React and TypeScript rules plus type-aware rules, with warnings failing `npm run lint`. Its React rules include React Compiler-style checks, such as `react(immutability)`, which flag mutating what a hook returned; Appendix C's patterns satisfy them, so they stay on | **ESLint** (pick it at the prompt or pass `--eslint`): the flat config timspicks uses, plus `@react-three/eslint-plugin`'s two allocation-in-loop rules. Its react-hooks 7 preset includes React Compiler rules that can flag R3F's mutable style. |
 | D2 | React Compiler | Off (the plain "TypeScript" variant) | `react-compiler-ts`: little to gain in a frame-loop app, and slower builds |
-| D3 | Debug panel | **leva**, with the lil-gui panel's controls, ranges and defaults | Keep **lil-gui**, created in an effect and destroyed on unmount |
+| D3 | Debug panel | **lil-gui** (confirmed), the prototype's own panel, from three's bundled copy (`three/addons/libs/lil-gui.module.min.js`): flat, with the prototype's controls, labels, ranges and defaults, created in an effect and destroyed on unmount. leva was tried first, in Phase 5, and dropped: it shows numbers to two decimals at most, so bias (−0.0001) read −0.00 and mieCoefficient (0.005) read 0.01 | **leva**: React hooks and folders, with numbers shown to two decimals |
 | D4 | State shared by the DOM panel and the scene | **zustand** | React context |
 | D5 | Physics | Keep the vendored **Ammo.js** build behind `ammoPhysics` in `src/features.ts`, off as today | `@react-three/rapier`: a rewrite of the physics, not a port |
 | D6 | Analytics and the site loader | Drop `main.js` and the shared `../lib/main.js` it loaded (see below). Put the gtag snippet from your other Vite projects in `index.html`, loading only on snovakow.com as before, and keep its startup log of the app's version | Load gtag on every host, as timspicks and homepage do |
 | D7 | Framing editor | See below | |
-| D8 | Sky | three's `Sky` addon (`three/addons/objects/Sky.js`), the prototype's own sky, which three has since given clouds. drei's `<Sky>` is an older copy from three-stdlib without them. It starts with clouds at three's defaults (coverage 0.4); cloud controls in the panel tune them, and a coverage of 0 gives the live demo's cloudless sky, since its older three.js has no clouds | Start cloudless (coverage 0) |
+| D8 | Sky | three's `Sky` addon (`three/addons/objects/Sky.js`), the prototype's own sky, which three has since given clouds. drei's `<Sky>` is an older copy from three-stdlib without them. It starts cloudless (coverage 0), like the live demo, whose older three.js has no clouds; three's default clouds looked large and washed out in this scene (confirmed). Cloud controls in the panel bring them in | Start with clouds at three's defaults (coverage 0.4) |
 | D9 | Build output | `dist/` with `base: ''`, so the build works from the site's `bounder/` folder; deploy by replacing the contents of `~/Sites/localhost/live/bounder/` with `dist/` | `build.outDir` pointing straight at the live folder |
 | D10 | Version | Versions continue where the prototype left off. Its page's cache-buster went from `0.0.3` to `0.1.1`, with commits named `0.0.0` to `0.1.1`, and the live site runs `0.1.1`. Phase 2 carries `0.1.1` into the template's `package.json`, and from then on only `/commit` changes it, each time with a version commit that becomes the next run's baseline (section 5). Phase 2's `/commit 0.1.2` makes the first; every run after it bumps the last number; Phase 10's `/commit 0.2.0` marks the port's first release, the one merged into `main` and deployed. Phase 0's run has no `package.json` to version, so it ends without one, and pushing closes it. The startup log carries on from the old loader's `App Version: 0.1.1` | Keep bumping the last number at the release too, as timspicks does |
 | D11 | The prototype's defects | Fix them as Appendix B says; strict TypeScript rejects most of them anyway | Port them as they are |
@@ -234,13 +234,13 @@ Read docs/r3f-port-plan.md: section 2, Phase 5 and Appendices A, B and C. Carry 
   - a `dpr` that allows the full device pixel ratio, as before
 - `src/scene/Scene.tsx` composes the scene: `<SunAndSky>`, drei's `<OrbitControls makeDefault enableDamping={false} />` (three's defaults, as before; B11), `<RendererSettings>`, and drei's `<Stats />`.
 - `SunAndSky` owns the sun angles (the panel's phi and theta) and computes the sun position (Appendix A), then renders `<SkyEnvironment>` and `<SunLight>` with it.
-- `SkyEnvironment` (D8): renders three's `Sky` addon (`three/addons/objects/Sky.js`) into a cube map with drei's `<Environment background>` (items 5 to 7). It takes the sun position, the panel's turbidity, rayleigh, mieCoefficient and mieDirectionalG, and the new cloudCoverage, cloudDensity and cloudElevation at three's defaults (0.4, 0.4 and 0.5). The cube map is the background and every standard material's environment, as the prototype's CubeCamera texture was. Write it with item 9's patterns, which keep the lint rules satisfied.
+- `SkyEnvironment` (D8): renders three's `Sky` addon (`three/addons/objects/Sky.js`) into a cube map with drei's `<Environment background>` (items 5 to 7). It takes the sun position, the panel's turbidity, rayleigh, mieCoefficient and mieDirectionalG, and the new cloudCoverage at 0, so the sky starts cloudless, with cloudDensity and cloudElevation at three's defaults (0.4 and 0.5). The cube map is the background and every standard material's environment, as the prototype's CubeCamera texture was. Write it with item 9's patterns, which keep the lint rules satisfied.
 - `SunLight`: the directional light and its shadow (Appendix A), with the panel's light and shadow controls.
 - `RendererSettings`, inside the Canvas: tone mapping (Neutral to start), exposure and shadow type from the panel, applied to the renderer (items 3 and 4; B4). The shadow types are Basic, PCF and VSM.
 - Reach the renderer through `get()` (item 9).
-- leva folders: Sun, Sky, Light and shadows, Renderer. Include every control in Appendix A's panel table, with the same ranges and defaults.
+- The debug panel (D3): lil-gui, flat, with every control in Appendix A's panel table, in its order, with its labels, ranges, steps, defaults and dropdown options, and the three cloud controls after mieDirectionalG. Hold the values in a small zustand store, `src/scene/panel.ts`, which `DebugPanel` writes from lil-gui's `onChange` and each component reads with a selector, so a light or renderer change never re-renders `SkyEnvironment`. Create the GUI in `DebugPanel`'s effect over a plain object of its own, and destroy it in the cleanup, so StrictMode's double mount leaves one panel. Uninstall leva, which nothing then imports, and say lil-gui instead of leva in the README.
 
-**Check** The sky looks like the live demo's plus clouds, and a cloud coverage of 0 gives the live demo's cloudless sky. Sun phi and theta move the sun; the sky sliders change the sky; tone mapping and shadow type switch with no new console warnings; Stats shows in a corner. Shadows and reflections can't be judged until Phase 6 adds something to show them.
+**Check** The view starts looking straight down, at the underside of the sky, until Phase 6 puts the room there; drag upward to see the horizon. The sky looks like the live demo's, cloudless, and raising cloud coverage brings clouds in. Sun phi and theta move the sun; the sky sliders change the sky; tone mapping and shadow type switch with no new console warnings; Stats shows in a corner. Shadows and reflections can't be judged until Phase 6 adds something to show them.
 
 ### Phase 6: room, balls and walking
 
@@ -314,7 +314,7 @@ Read docs/r3f-port-plan.md in full. Carry out Phase 9 only: review the finished 
 
 **The work**
 
-- Go through Appendix A line by line against the code. Fix what differs unintentionally, and list the deliberate differences, such as D3, D8, PCFSoft's removal, the half-float environment cube and the Appendix B fixes.
+- Go through Appendix A line by line against the code. Fix what differs unintentionally, and list the deliberate differences, such as D8, PCFSoft's removal, the half-float environment cube and the Appendix B fixes.
 - Remove leftovers: template files or text (the Vite and React logos, "Vite + React", `App.css`), dependencies nothing imports (compare `npm ls --depth=0` with the imports), `any` or lint suppressions without a stated reason, and `console.log`.
 - README.md, for a public reader. Keep the stack line, the Stack table and the Workflow section, and bring the rest up to date: what Bounder is, the live demo, what's in it, the controls including the debug panel, running it (Node.js 20.19 or later, `npm install`, `npm run dev`), building it (`npm run build` makes a static site in `dist/` that works from any folder), its status (the rebuild is done, and the live demo follows once it's deployed), and credits. No file paths or internal values; keep the existing voice. Keep the link to this plan for now; Phase 10 removes it.
 
@@ -407,11 +407,11 @@ What the prototype does, for the port to match. D8 and the Appendix B fixes are 
 | intensity | light's intensity | 0 to 1 | 1 |
 | bias | light's shadow bias | −0.001 to 0 | −0.0001 |
 | toneMappingExposure | renderer | 0 to 1 | 1 |
-| shadowMap | renderer's shadow type | Basic, PCF, PCFSoft, VSM | PCF |
+| shadowMap | renderer's shadow type | BasicShadowMap, PCFShadowMap, PCFSoftShadowMap, VSMShadowMap | PCFShadowMap |
 | blurSamples | light's shadow blur samples | 1 to 30, step 1 | 5 |
-| toneMapping | renderer | No, Linear, Reinhard, Cineon, ACESFilmic, AgX, Neutral | Neutral |
+| toneMapping | renderer | NoToneMapping, LinearToneMapping, ReinhardToneMapping, CineonToneMapping, ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping | NeutralToneMapping |
 
-The port drops PCFSoft, which three r186 removed, and adds cloudCoverage, cloudDensity and cloudElevation, each 0 to 1, at three's defaults of 0.4, 0.4 and 0.5; the live demo has no clouds (D8).
+The port drops PCFSoftShadowMap, which three r186 removed, and adds cloudCoverage, cloudDensity and cloudElevation after mieDirectionalG, each 0 to 1: coverage at 0, so the sky starts cloudless like the live demo, and density and elevation at three's defaults of 0.4 and 0.5 (D8).
 
 **Room**
 
