@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef } from 'react'
 import { DynamicDrawUsage, Object3D, Vector3 } from 'three'
 import type { InstancedMesh } from 'three'
+import { ammoPhysics } from '../features.ts'
+import { AmmoPhysics } from '../physics/AmmoPhysics.tsx'
 import { blueMaterial } from './materials.ts'
 
 const ballCount = 1000
@@ -18,7 +20,18 @@ function layOut(): Vector3[] {
   )
 }
 
-// The physics test's balls, as one instanced mesh. They hold still unless physics is on
+// Moves each instance to its position. Physics calls it every frame, so it allocates nothing
+function place(instances: InstancedMesh, positions: readonly Vector3[]) {
+  for (let i = 0; i < positions.length; i++) {
+    dummy.position.copy(positions[i])
+    dummy.updateMatrix()
+    instances.setMatrixAt(i, dummy.matrix)
+  }
+  instances.instanceMatrix.needsUpdate = true
+  instances.computeBoundingSphere()
+}
+
+// The physics test's balls, as one instanced mesh. They hold still unless physics is on, when AmmoPhysics moves them
 export function Balls() {
   const mesh = useRef<InstancedMesh>(null)
   // Kept for physics to move and copy into the instances
@@ -31,18 +44,19 @@ export function Balls() {
     if (positions.current.length === 0) positions.current = layOut()
 
     instances.instanceMatrix.setUsage(DynamicDrawUsage)
-    positions.current.forEach((position, i) => {
-      dummy.position.copy(position)
-      dummy.updateMatrix()
-      instances.setMatrixAt(i, dummy.matrix)
-    })
-    instances.instanceMatrix.needsUpdate = true
-    instances.computeBoundingSphere()
+    place(instances, positions.current)
   }, [])
 
+  const onStep = () => {
+    if (mesh.current) place(mesh.current, positions.current)
+  }
+
   return (
-    <instancedMesh ref={mesh} args={[undefined, undefined, ballCount]} material={blueMaterial} castShadow receiveShadow>
-      <sphereGeometry args={[ballRadius, 24, 12]} />
-    </instancedMesh>
+    <>
+      <instancedMesh ref={mesh} args={[undefined, undefined, ballCount]} material={blueMaterial} castShadow receiveShadow>
+        <sphereGeometry args={[ballRadius, 24, 12]} />
+      </instancedMesh>
+      {ammoPhysics && <AmmoPhysics positions={positions} radius={ballRadius} onStep={onStep} />}
+    </>
   )
 }

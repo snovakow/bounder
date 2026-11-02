@@ -61,7 +61,7 @@ npm install
 npm run dev
 ```
 
-and open the address it prints. The rebuild is still in progress, so for now that shows the room under the sky, with the physics test's balls hanging above it and the debug panel to tune the daylight. You can look around, walk through the room and draw bounds on it; the physics is still to come. The live demo is the original prototype.
+and open the address it prints. The rebuild is still in progress, so for now that shows the room under the sky, with the physics test's balls hanging above it and the debug panel to tune the daylight. You can look around, walk through the room and draw bounds on it. The physics is in as well, behind a feature flag that's off by default. The live demo is the original prototype.
 
 ## Credits
 
