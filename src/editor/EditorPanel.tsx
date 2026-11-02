@@ -19,6 +19,8 @@ export function EditorPanel() {
         value={type}
         onChange={(event) => {
           if (isBoundType(event.target.value)) setType(event.target.value)
+          // Left focused, the browser's type-ahead would turn the W of walking into a switch to Wall
+          event.target.blur()
         }}
       >
         {boundTypes.map((boundType) => (
