@@ -19,15 +19,15 @@ Bounder is a browser-based 3D prototype for marking out the bounds of a space on
 
 Around them are drei's helpers, a lil-gui debug panel, zustand for shared state, Ammo.js for physics and Oxlint for linting.
 
-The rebuild onto this stack is in progress. The live demo and the code on `main` are still the original prototype: plain three.js, bundled with webpack.
+Bounder started as a plain three.js prototype bundled with webpack, and has been rebuilt onto this stack. The live demo is still the prototype until the rebuild is deployed.
 
 ## What's in it
 
 - **A test room** to orbit around, or to walk through at eye height.
-- **Daylight**: an analytic sky that lights the scene and its reflections, a sun you can move, and soft shadows you can tune.
-- **A bounds editor**: chains of points joined by links, drawn on the room's surfaces. Telling floors, walls and tracks apart, and turning walls into solid outlines, are work in progress.
-- **A physics test**: a thousand balls above the room that fall and settle on it when physics is switched on. It uses [Ammo.js](https://github.com/kripken/ammo.js), the Bullet physics engine compiled to WebAssembly, and is off by default.
-- **A debug panel** with sliders for the sun, the sky, the shadows and the tone mapping.
+- **Daylight**: an analytic sky that lights the scene and its reflections, a sun you can move, optional clouds, and soft shadows you can tune.
+- **A bounds editor**: chains of points joined by links, drawn on the room's surfaces. Each chain is a floor, a wall or a track, chosen in the editor's panel. What sets the three apart, closing a chain into a loop, and turning walls into solid outlines are still to come.
+- **A physics test**: a thousand balls above the room that fall when physics is switched on, and most of them settle on it. It uses [Ammo.js](https://github.com/kripken/ammo.js), the Bullet physics engine compiled to WebAssembly, and is off by default.
+- **A debug panel** with sliders for the sun, the sky, the clouds, the shadows and the tone mapping.
 
 ## Controls
 
@@ -41,12 +41,14 @@ The rebuild onto this stack is in progress. The live demo and the code on `main`
 | Move a point | Shift-drag it |
 | Insert a point into a link | Shift-click the link |
 | Start a new chain | Choose another type in the panel at the bottom right, then shift-click the room |
+| Carry on with an earlier chain | Shift-click one of its points, with its type chosen in the panel, then shift-click the room |
+| Tune the sun, sky, shadows and tone mapping | Use the debug panel at the top right |
 
-Points stay on the room's surfaces as you drag them.
+Points stay on the room's surfaces as you drag them, and a new point joins the end of the chain you last worked on.
 
 ## Workflow
 
-- **Planned in phases.** The rebuild follows a [written plan](docs/r3f-port-plan.md). Each phase is one focused thread, and the phases that change code end with lint and a type-checked production build passing.
+- **Planned in phases.** The rebuild followed a [written plan](docs/r3f-port-plan.md). Each phase was one focused thread, and the phases that changed code ended with lint and a type-checked production build passing.
 - **Reviewed before it's committed.** Every batch of work goes through `/commit`, a [Claude Code skill](.claude/skills/commit/SKILL.md) that serves as the final code review. It's adapted from a shared [baseline](https://github.com/snovakow/Claude-Skills/tree/main/skills/commit), and it runs in a fresh thread, so the review starts without the author's assumptions. It reads every changed line for bugs, React Three Fiber and three.js pitfalls, type and lint escapes, new dependencies, leftovers and anything that shouldn't be public. Then it runs the checks, splits the work into focused commits with descriptive messages, and keeps this README accurate.
 - **Versioned checkpoints.** Versions continue from the prototype's last, 0.1.1: each reviewed batch ends with a version commit, which marks where the next review starts.
 - **Current dependencies.** Packages and tools track their latest releases, and each review reports anything that has fallen behind.
@@ -54,16 +56,27 @@ Points stay on the room's surfaces as you drag them.
 
 ## Running it locally
 
-You need [Node.js](https://nodejs.org) 20.19 or later. Then, in a clone:
+You need [Node.js](https://nodejs.org) 22.12 or later. Then, in a clone:
 
 ```sh
 npm install
 npm run dev
 ```
 
-and open the address it prints. The rebuild is still in progress, so for now that shows the room under the sky, with the physics test's balls hanging above it and the debug panel to tune the daylight. You can look around, walk through the room and draw bounds on it. The physics is in as well, behind a feature flag that's off by default. The live demo is the original prototype.
+and open the address it prints.
+
+## Building it
+
+```sh
+npm run build
+```
+
+makes a static site in `dist/`. Its paths are relative, so it works from any folder on any web server. `npm run preview` serves it locally to try it out.
+
+`npm run lint` and `npm run typecheck` run the checks every review runs.
 
 ## Credits
 
-- [three.js](https://threejs.org), including its sky shader, an implementation of the Preetham analytic daylight model.
+- [three.js](https://threejs.org), including its sky shader, an implementation of the Preetham analytic daylight model, and the lil-gui panel it bundles.
+- [React Three Fiber](https://r3f.docs.pmnd.rs) and [drei](https://drei.docs.pmnd.rs), from Poimandres.
 - [Ammo.js](https://github.com/kripken/ammo.js), Bullet physics compiled to WebAssembly. A build of it is included in this repository under its zlib license.
