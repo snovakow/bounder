@@ -19,7 +19,7 @@ Bounder is a browser-based 3D prototype for marking out the bounds of a space on
 
 Around them are drei's helpers, a lil-gui debug panel, zustand for shared state, Ammo.js for physics and Oxlint for linting.
 
-Bounder started as a plain three.js prototype bundled with webpack, and has been rebuilt onto this stack. The live demo is still the prototype until the rebuild is deployed.
+Bounder started as a plain three.js prototype bundled with webpack, and has been rebuilt onto this stack, which the live demo now runs.
 
 ## What's in it
 
