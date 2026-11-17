@@ -1,0 +1,4 @@
+# Serve WebAssembly with its own type. Without it, browsers refuse to compile Ammo.js's .wasm as it
+# streams in, and Ammo falls back to downloading it a second time and compiling it whole.
+AddType application/wasm .wasm
+
